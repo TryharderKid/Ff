@@ -1,5 +1,5 @@
--- Simple whitelist system with letter-based obfuscation
-local function generateLetterObfuscatedWhitelist()
+-- Whitelist system with random character insertion obfuscation
+local function generateRandomInsertionWhitelist()
     -- Safe function caller
     local function safecall(func, ...)
         if type(func) == "function" then
@@ -80,49 +80,56 @@ local function generateLetterObfuscatedWhitelist()
     -- Simple obfuscation: hash the HWID
     local obfuscatedHWID = sha256(hwid)
     
-    -- Number to letter obfuscation
-    local function obfuscateNumber(num)
-        local numStr = tostring(num)
+    -- Random character insertion obfuscation
+    local function obfuscateWithRandomChars(str)
         local result = ""
+        local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         
-        for i = 1, #numStr do
-            local digit = tonumber(string.sub(numStr, i, i))
-            if digit == nil then
-                -- If it's not a digit (like a dash or other character), keep it as is
-                result = result .. string.sub(numStr, i, i)
-            else
-                -- Convert digit to letter pattern
-                -- 0 = j, 1 = a, 2 = b, 3 = c, 4 = d, 5 = e, 6 = f, 7 = g, 8 = h, 9 = i
-                local letters = {"j", "a", "b", "c", "d", "e", "f", "g", "h", "i"}
-                result = result .. letters[digit + 1]
+        for i = 1, #str do
+            local char = string.sub(str, i, i)
+            -- Add the original character
+            result = result .. char
+            
+            -- Add a random character after each original character
+            if i < #str then
+                local randomIndex = math.random(1, #chars)
+                local randomChar = string.sub(chars, randomIndex, randomIndex)
+                result = result .. randomChar
             end
         end
         
         return result
     end
     
-    -- Format the whitelist string with letter obfuscation for numbers
-    local whitelistString = string.format(
-        "%s_%s_%s_%s_%s_%s_%s_%s_%s",
-        obfuscatedHWID, -- Keep HWID as is since it's already obfuscated
-        obfuscateNumber(userId),
-        persistentID, -- Keep UUID format as is
-        obfuscateNumber(placeID),
-        clientID, -- Keep UUID format as is
-        obfuscateNumber(isPc),
-        obfuscateNumber(isMobile),
+    -- Format the whitelist string with random character insertion
+    local components = {
+        obfuscatedHWID,
+        tostring(userId),
+        tostring(persistentID),
+        tostring(placeID),
+        tostring(clientID),
+        tostring(isPc),
+        tostring(isMobile),
         playerName,
         executorName
-    )
+    }
+    
+    -- Obfuscate each component
+    for i = 1, #components do
+        components[i] = obfuscateWithRandomChars(components[i])
+    end
+    
+    -- Join with underscores
+    local whitelistString = table.concat(components, "_")
     
     return whitelistString
 end
 
 -- Generate the whitelist string
-local whitelistString = generateLetterObfuscatedWhitelist()
+local whitelistString = generateRandomInsertionWhitelist()
 
 -- Print the result
-print("Letter-Obfuscated Whitelist String:")
+print("Random Insertion Obfuscated Whitelist String:")
 print(whitelistString)
 
 -- Copy to clipboard
