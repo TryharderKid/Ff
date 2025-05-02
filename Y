@@ -1,1 +1,142 @@
-6539623137306637306239353838316431396162646237353365363464363531_8367759083_af82c364-3746-411d-af5b-236fde8d70c2_3623096087_fba078e1-e7a1-4082-ad2d-877b7094797b_0_1000_HVX_Havoc_Delta
+-- Simple whitelist system with letter-based obfuscation
+local function generateLetterObfuscatedWhitelist()
+    -- Safe function caller
+    local function safecall(func, ...)
+        if type(func) == "function" then
+            local success, result = pcall(func, ...)
+            if success then return result end
+        end
+        return nil
+    end
+    
+    -- Get HWID with multiple fallbacks
+    local hwid = nil
+    hwid = safecall(function() return getexecutorhwid() end)
+    if not hwid then hwid = safecall(function() return gethwid() end) end
+    if not hwid then hwid = safecall(function() return get_hwid() end) end
+    if not hwid then hwid = safecall(function() return getexecutoridentifier() end) end
+    if not hwid then hwid = "UNKNOWN_HWID" end
+    
+    -- Simple SHA256 hashing function (for HWID obfuscation)
+    local function sha256(str)
+        -- This is a simplified version for demonstration
+        -- In a real implementation, use a proper SHA256 library
+        local result = ""
+        for i = 1, #str do
+            local byte = string.byte(str, i)
+            result = result .. string.format("%02x", byte)
+        end
+        -- Pad to make it look like a real SHA256 hash
+        while #result < 64 do
+            result = result .. "0"
+        end
+        return result:sub(1, 64)
+    end
+    
+    -- Get user data
+    local userId = game:GetService("Players").LocalPlayer.UserId
+    
+    -- Create a persistent ID
+    local function getPersistentID()
+        local HttpService = game:GetService("HttpService")
+        local filename = "persistent_id.dat"
+        
+        local existingID = nil
+        pcall(function()
+            if readfile then existingID = readfile(filename) end
+        end)
+        
+        if existingID and #existingID > 10 then
+            return existingID
+        end
+        
+        local newID = HttpService:GenerateGUID(false)
+        pcall(function()
+            if writefile then writefile(filename, newID) end
+        end)
+        
+        return newID
+    end
+    
+    local persistentID = getPersistentID()
+    local placeID = game.PlaceId
+    local clientID = game:GetService("RbxAnalyticsService"):GetClientId()
+    
+    -- Determine platform
+    local UserInputService = game:GetService("UserInputService")
+    local isPc = UserInputService.KeyboardEnabled and 500 or 0
+    local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled and 1000 or 0
+    
+    -- Get player name
+    local playerName = game:GetService("Players").LocalPlayer.Name
+    
+    -- Get executor name
+    local executorName = "Unknown"
+    pcall(function()
+        if identifyexecutor then executorName = identifyexecutor() end
+        if executorName == "Unknown" and getexecutorname then executorName = getexecutorname() end
+    end)
+    
+    -- Simple obfuscation: hash the HWID
+    local obfuscatedHWID = sha256(hwid)
+    
+    -- Number to letter obfuscation
+    local function obfuscateNumber(num)
+        local numStr = tostring(num)
+        local result = ""
+        
+        for i = 1, #numStr do
+            local digit = tonumber(string.sub(numStr, i, i))
+            if digit == nil then
+                -- If it's not a digit (like a dash or other character), keep it as is
+                result = result .. string.sub(numStr, i, i)
+            else
+                -- Convert digit to letter pattern
+                -- 0 = j, 1 = a, 2 = b, 3 = c, 4 = d, 5 = e, 6 = f, 7 = g, 8 = h, 9 = i
+                local letters = {"j", "a", "b", "c", "d", "e", "f", "g", "h", "i"}
+                result = result .. letters[digit + 1]
+            end
+        end
+        
+        return result
+    end
+    
+    -- Format the whitelist string with letter obfuscation for numbers
+    local whitelistString = string.format(
+        "%s_%s_%s_%s_%s_%s_%s_%s_%s",
+        obfuscatedHWID, -- Keep HWID as is since it's already obfuscated
+        obfuscateNumber(userId),
+        persistentID, -- Keep UUID format as is
+        obfuscateNumber(placeID),
+        clientID, -- Keep UUID format as is
+        obfuscateNumber(isPc),
+        obfuscateNumber(isMobile),
+        playerName,
+        executorName
+    )
+    
+    return whitelistString
+end
+
+-- Generate the whitelist string
+local whitelistString = generateLetterObfuscatedWhitelist()
+
+-- Print the result
+print("Letter-Obfuscated Whitelist String:")
+print(whitelistString)
+
+-- Copy to clipboard
+pcall(function()
+    if setclipboard then
+        setclipboard(whitelistString)
+        print("Whitelist string copied to clipboard!")
+    elseif writeclipboard then
+        writeclipboard(whitelistString)
+        print("Whitelist string copied to clipboard!")
+    else
+        print("Clipboard function not available. Please manually copy the string above.")
+    end
+end)
+
+-- Return the string
+return whitelistString
