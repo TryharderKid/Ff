@@ -1,0 +1,5 @@
+local WhitelistSystem = loadstring(game:HttpGet("https://raw.githubusercontent.com/TryharderKid/Ff/main/Whitelist_Data.lua"))()
+if not WhitelistSystem:Initialize() then
+    return -- Stop execution if not whitelisted
+end
+-- Continue with your script if whitelisted
