@@ -4,7 +4,7 @@ local WhitelistSystem = {}
 -- Configuration
 WhitelistSystem.Config = {
     LocalFile = "Whitelist_System.lua",
-    GitHubRawURL = "https://raw.githubusercontent.com/TryharderKid/Ff/main/WWhitelist_Data.lua",
+    GitHubRawURL = "https://raw.githubusercontent.com/TryharderKid/Ff/main/Whitelist_Data.lua",
     Debug = true  -- Enable debug mode to help troubleshoot
 }
 
