@@ -6,7 +6,7 @@ local githubRepo = "Ff"
 local branch = "refs/heads/main"
 
 -- URLs for the whitelist files
-local whitelistSystemUrl = string.format("https://raw.githubusercontent.com/%s/%s/%s/WWhitelist.lua", githubUser, githubRepo, branch)
+local whitelistSystemUrl = string.format("https://raw.githubusercontent.com/%s/%s/%s/Whitelist.lua", githubUser, githubRepo, branch)
 local whitelistDataUrl = string.format("https://raw.githubusercontent.com/%s/%s/%s/whitelist_Data.lua", githubUser, githubRepo, branch)
 
 -- Function to fetch content from GitHub
@@ -90,6 +90,9 @@ local function loadWhitelistSystem()
         return false
     end
     
+    -- Print the whitelist data code for debugging
+    print("Whitelist data code:", whitelistDataCode)
+    
     -- Load the whitelist system
     local WhitelistSystem
     local success, errorOrSystem = pcall(function()
@@ -134,6 +137,7 @@ local function loadWhitelistSystem()
         return false
     end
     
+    -- Check if the result is a table
     if type(result) ~= "table" then
         loadingUI:Destroy()
         local errorUI = createMessageUI("Whitelist data is not a table. Got: " .. type(result), Color3.fromRGB(200, 50, 50))
@@ -183,3 +187,4 @@ if not success then
 end
 
 return result
+
