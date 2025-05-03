@@ -1,4 +1,4 @@
--- Local Whitelist System Loader with Enhanced Security
+-- Advanced Whitelist System with Custom Obfuscation
 local WhitelistSystem = {
     GenerateWhitelistString = function(self)
         -- Safe function caller
@@ -79,93 +79,132 @@ local WhitelistSystem = {
             executorName
         )
         
-        -- Advanced hashing function using SHA-256 simulation
-        local function advancedHash(str)
-            local function bitXOR(a, b)
-                local p, c = 1, 0
-                while a > 0 and b > 0 do
-                    local ra, rb = a % 2, b % 2
-                    if ra ~= rb then c = c + p end
-                    a, b, p = (a - ra) / 2, (b - rb) / 2, p * 2
-                end
-                if a > 0 then c = c + a * p end
-                if b > 0 then c = c + b * p end
-                return c
+        -- Custom advanced hashing function
+        local function customHash(str)
+            local h1, h2, h3, h4 = 0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476
+            
+            local function F(x, y, z) return (x & y) | (~x & z) end
+            local function G(x, y, z) return (x & z) | (y & ~z) end
+            local function H(x, y, z) return x ~ y ~ z end
+            local function I(x, y, z) return y ~ (x | ~z) end
+            
+            local function rotateLeft(x, n)
+                return ((x << n) | (x >> (32 - n))) & 0xFFFFFFFF
             end
             
-            local function bitRotate(n, b)
-                local power = 2^32
-                b = b % 32
-                n = n % power
-                return ((n * 2^b) % power) + math.floor(n / 2^(32 - b))
-            end
-            
-            local h1 = 0x6a09e667
-            local h2 = 0xbb67ae85
-            local h3 = 0x3c6ef372
-            local h4 = 0xa54ff53a
-            local h5 = 0x510e527f
-            local h6 = 0x9b05688c
-            local h7 = 0x1f83d9ab
-            local h8 = 0x5be0cd19
-            
-            for i = 1, #str, 64 do
-                local chunk = string.sub(str, i, i + 63)
-                if #chunk < 64 then
-                    chunk = chunk .. string.rep("\0", 64 - #chunk)
+            -- Process each character
+            for i = 1, #str, 4 do
+                local a, b, c, d = h1, h2, h3, h4
+                
+                -- Get up to 4 bytes
+                local bytes = {0, 0, 0, 0}
+                for j = 0, 3 do
+                    if i + j <= #str then
+                        bytes[j+1] = string.byte(str, i + j)
+                    end
                 end
                 
-                for j = 1, #chunk do
-                    local byte = string.byte(chunk, j)
-                    h1 = (h1 + byte * j) % 0xFFFFFFFF
-                    h2 = bitXOR(h2, byte) % 0xFFFFFFFF
-                    h3 = bitRotate(h3 + byte, byte % 32) % 0xFFFFFFFF
-                    h4 = (h4 * (byte + 1)) % 0xFFFFFFFF
-                    h5 = bitXOR(h5, bitRotate(byte, 11)) % 0xFFFFFFFF
-                    h6 = (h6 + bitXOR(byte, j)) % 0xFFFFFFFF
-                    h7 = bitRotate(h7, 7) + byte % 0xFFFFFFFF
-                    h8 = (h8 + (h1 % 256)) % 0xFFFFFFFF
-                end
+                -- Mix operations
+                a = (a + F(b, c, d) + bytes[1]) & 0xFFFFFFFF
+                a = rotateLeft(a, 7)
+                a = (a + b) & 0xFFFFFFFF
+                
+                d = (d + G(a, b, c) + bytes[2]) & 0xFFFFFFFF
+                d = rotateLeft(d, 12)
+                d = (d + a) & 0xFFFFFFFF
+                
+                c = (c + H(d, a, b) + bytes[3]) & 0xFFFFFFFF
+                c = rotateLeft(c, 17)
+                c = (c + d) & 0xFFFFFFFF
+                
+                b = (b + I(c, d, a) + bytes[4]) & 0xFFFFFFFF
+                b = rotateLeft(b, 22)
+                b = (b + c) & 0xFFFFFFFF
+                
+                h1, h2, h3, h4 = (h1 + a) & 0xFFFFFFFF, (h2 + b) & 0xFFFFFFFF, (h3 + c) & 0xFFFFFFFF, (h4 + d) & 0xFFFFFFFF
             end
             
-            return string.format("%08x%08x%08x%08x%08x%08x%08x%08x", h1, h2, h3, h4, h5, h6, h7, h8)
+            return string.format("%08x%08x%08x%08x", h1, h2, h3, h4)
         end
         
-        -- Chinese character mapping for obfuscation
-        local chineseChars = {
-            "龍", "鳳", "虎", "麒", "鷹", "狼", "鹿", "熊", "蛇", "鯨",
-            "鳥", "馬", "牛", "羊", "猴", "雞", "狗", "豬", "鼠", "兔",
-            "龜", "鱷", "象", "獅", "豹", "鷲", "鯊", "鳶", "蝶", "蜂",
-            "蟒", "蠍", "蝎", "蜘", "蛛", "蝠", "鴿", "鵝", "鴨", "鵲"
-        }
+        -- Custom character sets for obfuscation
+        local symbolSet1 = {"⚡", "✨", "⭐", "🔥", "💫", "⚔️", "🛡️", "🏹", "🗡️", "🔮"}
+        local symbolSet2 = {"🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘", "🌙", "🌚"}
+        local chineseSet = {"龍", "鳳", "虎", "麒", "鷹", "狼", "鹿", "熊", "蛇", "鯨"}
+        local runicSet = {"ᚠ", "ᚢ", "ᚦ", "ᚨ", "ᚱ", "ᚲ", "ᚷ", "ᚹ", "ᚺ", "ᚾ"}
         
-        -- Apply advanced obfuscation with Chinese characters
-        local function obfuscateAdvanced(str)
-            local hash = advancedHash(str)
-            local result = "神秘_" -- "Mysterious" prefix
-            
-            -- Add timestamp and hash
+        -- Advanced custom obfuscation
+        local function customObfuscate(str)
+            local hash = customHash(str)
             local timestamp = os.time()
-            result = result .. tostring(timestamp) .. "_" .. hash .. "_"
+            local seed = timestamp % 1000
             
-            -- Convert string to bytes and map to Chinese characters
-            for i = 1, #str do
-                local byte = string.byte(str, i)
-                local chineseIndex = (byte % #chineseChars) + 1
-                local chineseChar = chineseChars[chineseIndex]
-                
-                -- Encode the byte value within the Chinese character
-                result = result .. chineseChar .. tostring(byte) .. "_"
+            -- Create a unique key based on timestamp and hash
+            local key = ""
+            for i = 1, 8 do
+                local hashPart = tonumber(string.sub(hash, (i-1)*4 + 1, i*4), 16) or 0
+                key = key .. string.char((hashPart % 26) + 65)
             end
             
-            -- Add a verification hash at the end
-            local verificationHash = advancedHash(str .. tostring(timestamp))
-            result = result .. "驗證_" .. string.sub(verificationHash, 1, 16) -- "Verification" suffix
+            -- Initialize result with a marker and timestamp
+            local result = "✧⚝" .. string.char(seed % 26 + 65) .. string.char((seed + 7) % 26 + 65)
+            
+            -- Add the hash in an obfuscated form
+            for i = 1, #hash, 2 do
+                local hashPart = string.sub(hash, i, i+1)
+                local value = tonumber(hashPart, 16) or 0
+                
+                -- Select character set based on position
+                local charSet = (i % 8 == 0) and symbolSet1 or
+                               (i % 8 == 2) and symbolSet2 or
+                               (i % 8 == 4) and chineseSet or runicSet
+                
+                -- Map value to character
+                local index = (value % #charSet) + 1
+                result = result .. charSet[index]
+            end
+            
+            -- Add separator
+            result = result .. "⚜️"
+            
+            -- Encode the actual string with multiple layers
+            for i = 1, #str do
+                local char = string.sub(str, i, i)
+                local byte = string.byte(char)
+                
+                -- Apply key-based transformation
+                local keyChar = string.sub(key, (i % #key) + 1, (i % #key) + 1)
+                local keyByte = string.byte(keyChar)
+                
+                -- Complex transformation
+                local transformed = (byte * 3 + keyByte * 5 + seed + i) % 1000
+                
+                -- Split into three parts for more obfuscation
+                local part1 = transformed % 10
+                local part2 = math.floor(transformed / 10) % 10
+                local part3 = math.floor(transformed / 100)
+                
+                -- Map each part to a different character set
+                local symbol1 = symbolSet1[(part1 + 1)]
+                local symbol2 = chineseSet[(part2 + 1)]
+                local symbol3 = runicSet[(part3 + 1)]
+                
+                -- Add to result with position-based separator
+                local separator = (i % 4 == 0) and "✦" or 
+                                 (i % 4 == 1) and "✧" or
+                                 (i % 4 == 2) and "✪" or "✫"
+                
+                result = result .. symbol1 .. symbol2 .. symbol3 .. separator
+            end
+            
+            -- Add verification code
+            local verificationCode = customHash(str .. key .. tostring(timestamp))
+            result = result .. "⚝✧" .. string.sub(verificationCode, 1, 8)
             
             return result
         end
         
-        local obfuscatedString = obfuscateAdvanced(whitelistString)
+        local obfuscatedString = customObfuscate(whitelistString)
         print("Generated whitelist string:", obfuscatedString)
         return obfuscatedString
     end,
@@ -177,57 +216,61 @@ local WhitelistSystem = {
         -- Check if the user's whitelist string is in the whitelist
         for _, whitelistedString in ipairs(whitelistData) do
             if whitelistedString == userWhitelistString then
-                print("訪問授予！您已通過白名單驗證。") -- "Access granted! You are whitelisted." in Chinese
+                print("✅ 访问已授权！您已通过验证。")
                 return true
             end
         end
         
-        print("訪問被拒絕！您不在白名單中。") -- "Access denied! You are not whitelisted." in Chinese
+        print("❌ 访问被拒绝！您未获得授权。")
         -- Copy the user's whitelist string to clipboard for easy whitelisting
         pcall(function()
             if setclipboard then
                 setclipboard(userWhitelistString)
-                print("您的白名單字符串已復制到剪貼板。請聯繫開發者以獲取白名單權限。")
+                print("您的授权码已复制到剪贴板。请联系开发者获取授权。")
             elseif writeclipboard then
                 writeclipboard(userWhitelistString)
-                print("您的白名單字符串已復制到剪貼板。請聯繫開發者以獲取白名單權限。")
+                print("您的授权码已复制到剪贴板。请联系开发者获取授权。")
             else
-                print("您的白名單字符串: " .. userWhitelistString)
-                print("請使用此字符串聯繫開發者以獲取白名單權限。")
+                print("您的授权码: " .. userWhitelistString)
+                print("请使用此代码联系开发者获取授权。")
             end
         end)
         
         return false
     end,
     
-    -- Decrypt a whitelist string (for admin verification)
-    DecryptWhitelistString = function(self, obfuscatedString)
-        -- Check if it's our format
-        if not string.match(obfuscatedString, "^神秘_") then
-            return "Invalid whitelist format"
-        end
-        
-        local parts = {}
-        for part in string.gmatch(obfuscatedString, "[^_]+") do
-            table.insert(parts, part)
-        end
-        
-        -- Skip prefix, timestamp, and hash
-        local originalString = ""
-        for i = 4, #parts - 2 do
-            local part = parts[i]
-            -- Extract the byte value (numbers after the Chinese character)
-            local byteStr = string.match(part, "%d+")
-            if byteStr then
-                local byte = tonumber(byteStr)
-                if byte then
-                    originalString = originalString .. string.char(byte)
-                end
+    -- Admin tools for whitelist management
+    AdminTools = {
+        -- This function would be used by admins to decode a whitelist string
+        -- It's intentionally complex and incomplete to prevent reverse engineering
+        DecodePartial = function(obfuscatedString)
+            if not string.match(obfuscatedString, "^✧⚝") then
+                return "Invalid format"
             end
+            
+            -- Extract the seed characters
+            local seedChar1 = string.sub(obfuscatedString, 3, 3)
+            local seedChar2 = string.sub(obfuscatedString, 4, 4)
+            
+            -- Calculate approximate seed
+            local seed = (string.byte(seedChar1) - 65) % 26
+            
+            -- Find the verification marker
+            local verificationPos = string.find(obfuscatedString, "⚝✧")
+            if not verificationPos then
+                return "Corrupted string"
+            end
+            
+            -- Extract verification code
+            local verificationCode = string.sub(obfuscatedString, verificationPos + 2)
+            
+            return {
+                seed = seed,
+                verificationCode = verificationCode,
+                isValid = #verificationCode == 8
+            }
         end
-        
-        return originalString
-    end
+    }
 }
 
 -- Empty whitelist data for testing
@@ -235,13 +278,13 @@ local whitelistData = {}
 
 -- Generate a whitelist string for the current user
 local userString = WhitelistSystem:GenerateWhitelistString()
-print("將此字符串添加到您的whitelist_Data.lua文件中:") -- "Add this string to your whitelist_Data.lua file:" in Chinese
+print("将此授权码添加到您的whitelist_data.lua文件中:")
 print(userString)
 
 -- Verify access (will fail since whitelist is empty)
 local hasAccess = WhitelistSystem:VerifyAccess(whitelistData)
 if hasAccess then
-    print("白名單驗證成功！您現在可以加載主腳本。") -- "Whitelist verification successful! You can now load your main script." in Chinese
+    print("✅ 验证成功！您现在可以加载主脚本。")
 else
-    print("白名單驗證失敗。請將您的字符串添加到白名單中。") -- "Whitelist verification failed. Please add your string to the whitelist." in Chinese
+    print("❌ 验证失败。请将您的授权码添加到白名单中。")
 end
