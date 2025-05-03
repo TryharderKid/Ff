@@ -1,6 +1,4 @@
--- Local Whitelist System Loader for Testing
-
--- Local whitelist system
+-- Local Whitelist System Loader with Enhanced Security
 local WhitelistSystem = {
     GenerateWhitelistString = function(self)
         -- Safe function caller
@@ -73,40 +71,101 @@ local WhitelistSystem = {
         
         -- Format the whitelist string with all identifiers
         local whitelistString = string.format("%s_%s_%s_%s_%s_%s", 
-            hwid, 
-            tostring(userId), 
+            hwid,
+            tostring(userId),
             tostring(persistentID),
             tostring(clientID),
             playerName,
             executorName
         )
         
-        -- Simple string hashing function
-        local function simpleHash(str)
-            local hash = 5381
-            for i = 1, #str do
-                hash = ((hash * 33) + string.byte(str, i)) % 2147483647
+        -- Advanced hashing function using SHA-256 simulation
+        local function advancedHash(str)
+            local function bitXOR(a, b)
+                local p, c = 1, 0
+                while a > 0 and b > 0 do
+                    local ra, rb = a % 2, b % 2
+                    if ra ~= rb then c = c + p end
+                    a, b, p = (a - ra) / 2, (b - rb) / 2, p * 2
+                end
+                if a > 0 then c = c + a * p end
+                if b > 0 then c = c + b * p end
+                return c
             end
-            return hash
+            
+            local function bitRotate(n, b)
+                local power = 2^32
+                b = b % 32
+                n = n % power
+                return ((n * 2^b) % power) + math.floor(n / 2^(32 - b))
+            end
+            
+            local h1 = 0x6a09e667
+            local h2 = 0xbb67ae85
+            local h3 = 0x3c6ef372
+            local h4 = 0xa54ff53a
+            local h5 = 0x510e527f
+            local h6 = 0x9b05688c
+            local h7 = 0x1f83d9ab
+            local h8 = 0x5be0cd19
+            
+            for i = 1, #str, 64 do
+                local chunk = string.sub(str, i, i + 63)
+                if #chunk < 64 then
+                    chunk = chunk .. string.rep("\0", 64 - #chunk)
+                end
+                
+                for j = 1, #chunk do
+                    local byte = string.byte(chunk, j)
+                    h1 = (h1 + byte * j) % 0xFFFFFFFF
+                    h2 = bitXOR(h2, byte) % 0xFFFFFFFF
+                    h3 = bitRotate(h3 + byte, byte % 32) % 0xFFFFFFFF
+                    h4 = (h4 * (byte + 1)) % 0xFFFFFFFF
+                    h5 = bitXOR(h5, bitRotate(byte, 11)) % 0xFFFFFFFF
+                    h6 = (h6 + bitXOR(byte, j)) % 0xFFFFFFFF
+                    h7 = bitRotate(h7, 7) + byte % 0xFFFFFFFF
+                    h8 = (h8 + (h1 % 256)) % 0xFFFFFFFF
+                end
+            end
+            
+            return string.format("%08x%08x%08x%08x%08x%08x%08x%08x", h1, h2, h3, h4, h5, h6, h7, h8)
         end
         
-        -- Apply a simple obfuscation
-        local function obfuscate(str)
-            local result = "Lurnai_"
-            local hash = simpleHash(str)
-            result = result .. tostring(hash) .. "_"
+        -- Chinese character mapping for obfuscation
+        local chineseChars = {
+            "龍", "鳳", "虎", "麒", "鷹", "狼", "鹿", "熊", "蛇", "鯨",
+            "鳥", "馬", "牛", "羊", "猴", "雞", "狗", "豬", "鼠", "兔",
+            "龜", "鱷", "象", "獅", "豹", "鷲", "鯊", "鳶", "蝶", "蜂",
+            "蟒", "蠍", "蝎", "蜘", "蛛", "蝠", "鴿", "鵝", "鴨", "鵲"
+        }
+        
+        -- Apply advanced obfuscation with Chinese characters
+        local function obfuscateAdvanced(str)
+            local hash = advancedHash(str)
+            local result = "神秘_" -- "Mysterious" prefix
             
+            -- Add timestamp and hash
+            local timestamp = os.time()
+            result = result .. tostring(timestamp) .. "_" .. hash .. "_"
+            
+            -- Convert string to bytes and map to Chinese characters
             for i = 1, #str do
-                local char = string.sub(str, i, i)
-                local byte = string.byte(char)
-                result = result .. tostring(byte) .. "_"
+                local byte = string.byte(str, i)
+                local chineseIndex = (byte % #chineseChars) + 1
+                local chineseChar = chineseChars[chineseIndex]
+                
+                -- Encode the byte value within the Chinese character
+                result = result .. chineseChar .. tostring(byte) .. "_"
             end
             
-            result = result .. "Lurnai"
+            -- Add a verification hash at the end
+            local verificationHash = advancedHash(str .. tostring(timestamp))
+            result = result .. "驗證_" .. string.sub(verificationHash, 1, 16) -- "Verification" suffix
+            
             return result
         end
         
-        local obfuscatedString = obfuscate(whitelistString)
+        local obfuscatedString = obfuscateAdvanced(whitelistString)
         print("Generated whitelist string:", obfuscatedString)
         return obfuscatedString
     end,
@@ -118,27 +177,56 @@ local WhitelistSystem = {
         -- Check if the user's whitelist string is in the whitelist
         for _, whitelistedString in ipairs(whitelistData) do
             if whitelistedString == userWhitelistString then
-                print("Access granted! You are whitelisted.")
+                print("訪問授予！您已通過白名單驗證。") -- "Access granted! You are whitelisted." in Chinese
                 return true
             end
         end
         
-        print("Access denied! You are not whitelisted.")
+        print("訪問被拒絕！您不在白名單中。") -- "Access denied! You are not whitelisted." in Chinese
         -- Copy the user's whitelist string to clipboard for easy whitelisting
         pcall(function()
             if setclipboard then
                 setclipboard(userWhitelistString)
-                print("Your whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
+                print("您的白名單字符串已復制到剪貼板。請聯繫開發者以獲取白名單權限。")
             elseif writeclipboard then
                 writeclipboard(userWhitelistString)
-                print("Your whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
+                print("您的白名單字符串已復制到剪貼板。請聯繫開發者以獲取白名單權限。")
             else
-                print("Your whitelist string: " .. userWhitelistString)
-                print("Contact the developer with this string to get whitelisted.")
+                print("您的白名單字符串: " .. userWhitelistString)
+                print("請使用此字符串聯繫開發者以獲取白名單權限。")
             end
         end)
         
         return false
+    end,
+    
+    -- Decrypt a whitelist string (for admin verification)
+    DecryptWhitelistString = function(self, obfuscatedString)
+        -- Check if it's our format
+        if not string.match(obfuscatedString, "^神秘_") then
+            return "Invalid whitelist format"
+        end
+        
+        local parts = {}
+        for part in string.gmatch(obfuscatedString, "[^_]+") do
+            table.insert(parts, part)
+        end
+        
+        -- Skip prefix, timestamp, and hash
+        local originalString = ""
+        for i = 4, #parts - 2 do
+            local part = parts[i]
+            -- Extract the byte value (numbers after the Chinese character)
+            local byteStr = string.match(part, "%d+")
+            if byteStr then
+                local byte = tonumber(byteStr)
+                if byte then
+                    originalString = originalString .. string.char(byte)
+                end
+            end
+        end
+        
+        return originalString
     end
 }
 
@@ -147,14 +235,13 @@ local whitelistData = {}
 
 -- Generate a whitelist string for the current user
 local userString = WhitelistSystem:GenerateWhitelistString()
-print("Add this string to your whitelist_Data.lua file:")
+print("將此字符串添加到您的whitelist_Data.lua文件中:") -- "Add this string to your whitelist_Data.lua file:" in Chinese
 print(userString)
 
 -- Verify access (will fail since whitelist is empty)
 local hasAccess = WhitelistSystem:VerifyAccess(whitelistData)
-
 if hasAccess then
-    print("Whitelist verification successful! You can now load your main script.")
+    print("白名單驗證成功！您現在可以加載主腳本。") -- "Whitelist verification successful! You can now load your main script." in Chinese
 else
-    print("Whitelist verification failed. Please add your string to the whitelist.")
+    print("白名單驗證失敗。請將您的字符串添加到白名單中。") -- "Whitelist verification failed. Please add your string to the whitelist." in Chinese
 end
