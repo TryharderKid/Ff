@@ -1,5 +1,5 @@
--- Advanced Whitelist System with Custom Obfuscation
-local WhitelistSystem = {
+-- Ultra-Secure Whitelist System with No Exposed Numbers
+local SecureWhitelist = {
     GenerateWhitelistString = function(self)
         -- Safe function caller
         local function safecall(func, ...)
@@ -61,14 +61,6 @@ local WhitelistSystem = {
             if executorName == "Unknown" and getexecutorname then executorName = getexecutorname() end
         end)
         
-        -- Print all components for debugging
-        print("HWID:", hwid)
-        print("UserID:", userId)
-        print("ClientID:", clientID)
-        print("PersistentID:", persistentID)
-        print("PlayerName:", playerName)
-        print("ExecutorName:", executorName)
-        
         -- Format the whitelist string with all identifiers
         local whitelistString = string.format("%s_%s_%s_%s_%s_%s", 
             hwid,
@@ -79,134 +71,120 @@ local WhitelistSystem = {
             executorName
         )
         
-        -- Custom advanced hashing function
-        local function customHash(str)
-            local h1, h2, h3, h4 = 0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476
-            
-            local function F(x, y, z) return (x & y) | (~x & z) end
-            local function G(x, y, z) return (x & z) | (y & ~z) end
-            local function H(x, y, z) return x ~ y ~ z end
-            local function I(x, y, z) return y ~ (x | ~z) end
-            
-            local function rotateLeft(x, n)
-                return ((x << n) | (x >> (32 - n))) & 0xFFFFFFFF
+        -- Create a completely custom encoding system
+        
+        -- First, create a secure hash
+        local function secureHash(str)
+            local h = 0x21F4A3B7
+            for i = 1, #str do
+                local byte = string.byte(str, i)
+                h = ((h * 31) + byte) % 0x7FFFFFFF
+                h = ((h ~ (h >> 13)) * 0x85EBCA77) % 0x7FFFFFFF
+                h = ((h ~ (h >> 16)) * 0xC2B2AE3D) % 0x7FFFFFFF
+                h = (h ~ (h >> 16)) % 0x7FFFFFFF
             end
-            
-            -- Process each character
-            for i = 1, #str, 4 do
-                local a, b, c, d = h1, h2, h3, h4
-                
-                -- Get up to 4 bytes
-                local bytes = {0, 0, 0, 0}
-                for j = 0, 3 do
-                    if i + j <= #str then
-                        bytes[j+1] = string.byte(str, i + j)
-                    end
-                end
-                
-                -- Mix operations
-                a = (a + F(b, c, d) + bytes[1]) & 0xFFFFFFFF
-                a = rotateLeft(a, 7)
-                a = (a + b) & 0xFFFFFFFF
-                
-                d = (d + G(a, b, c) + bytes[2]) & 0xFFFFFFFF
-                d = rotateLeft(d, 12)
-                d = (d + a) & 0xFFFFFFFF
-                
-                c = (c + H(d, a, b) + bytes[3]) & 0xFFFFFFFF
-                c = rotateLeft(c, 17)
-                c = (c + d) & 0xFFFFFFFF
-                
-                b = (b + I(c, d, a) + bytes[4]) & 0xFFFFFFFF
-                b = rotateLeft(b, 22)
-                b = (b + c) & 0xFFFFFFFF
-                
-                h1, h2, h3, h4 = (h1 + a) & 0xFFFFFFFF, (h2 + b) & 0xFFFFFFFF, (h3 + c) & 0xFFFFFFFF, (h4 + d) & 0xFFFFFFFF
-            end
-            
-            return string.format("%08x%08x%08x%08x", h1, h2, h3, h4)
+            return h
         end
         
-        -- Custom character sets for obfuscation
-        local symbolSet1 = {"⚡", "✨", "⭐", "🔥", "💫", "⚔️", "🛡️", "🏹", "🗡️", "🔮"}
-        local symbolSet2 = {"🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘", "🌙", "🌚"}
-        local chineseSet = {"龍", "鳳", "虎", "麒", "鷹", "狼", "鹿", "熊", "蛇", "鯨"}
-        local runicSet = {"ᚠ", "ᚢ", "ᚦ", "ᚨ", "ᚱ", "ᚲ", "ᚷ", "ᚹ", "ᚺ", "ᚾ"}
+        -- Create a unique key from the hash and timestamp
+        local timestamp = os.time()
+        local hash = secureHash(whitelistString .. tostring(timestamp))
         
-        -- Advanced custom obfuscation
-        local function customObfuscate(str)
-            local hash = customHash(str)
-            local timestamp = os.time()
-            local seed = timestamp % 1000
+        -- Create a completely custom character set with no numbers
+        local charSet = {
+            -- Mythical creatures (20 chars)
+            "🐉", "🦄", "🧚", "🧙", "🧜", "🧝", "🧞", "🧟", "👹", "👺", 
+            "👻", "👽", "👾", "🦊", "🦁", "🐲", "🦅", "🦇", "🦋", "🦂",
             
-            -- Create a unique key based on timestamp and hash
-            local key = ""
-            for i = 1, 8 do
-                local hashPart = tonumber(string.sub(hash, (i-1)*4 + 1, i*4), 16) or 0
-                key = key .. string.char((hashPart % 26) + 65)
+            -- Celestial symbols (20 chars)
+            "⭐", "🌟", "💫", "✨", "☄️", "🌠", "🌌", "🪐", "🌑", "🌒", 
+            "🌓", "🌔", "🌕", "🌖", "🌗", "🌘", "🌙", "☀️", "🌞", "🌚",
+            
+            -- Magical symbols (20 chars)
+            "✨", "💫", "⚡", "🔮", "⚔️", "🛡️", "🏹", "🗡️", "🧿", "📿", 
+            "🔯", "✡️", "☸️", "☯️", "✝️", "☦️", "☪️", "☮️", "🕉️", "🔱",
+            
+            -- Ancient symbols (20 chars)
+            "𓀀", "𓀁", "𓀂", "𓀃", "𓀄", "𓀅", "𓀆", "𓀇", "𓀈", "𓀉", 
+            "𓀊", "𓀋", "𓀌", "𓀍", "𓀎", "𓀏", "𓀐", "𓀑", "𓀒", "𓀓"
+        }
+        
+        -- Create a completely custom encoding function
+        local function customEncode(str, key)
+            local result = ""
+            local keyValue = key
+            
+            -- Add a marker prefix that looks magical
+            result = "✧⚝🔮🧿"
+            
+            -- Encode the timestamp in a way that doesn't expose numbers
+            local timeChars = {}
+            local timeStr = tostring(timestamp)
+            for i = 1, #timeStr do
+                local digit = tonumber(string.sub(timeStr, i, i))
+                timeChars[i] = charSet[digit + 1] -- +1 because Lua is 1-indexed
             end
             
-            -- Initialize result with a marker and timestamp
-            local result = "✧⚝" .. string.char(seed % 26 + 65) .. string.char((seed + 7) % 26 + 65)
-            
-            -- Add the hash in an obfuscated form
-            for i = 1, #hash, 2 do
-                local hashPart = string.sub(hash, i, i+1)
-                local value = tonumber(hashPart, 16) or 0
-                
-                -- Select character set based on position
-                local charSet = (i % 8 == 0) and symbolSet1 or
-                               (i % 8 == 2) and symbolSet2 or
-                               (i % 8 == 4) and chineseSet or runicSet
-                
-                -- Map value to character
-                local index = (value % #charSet) + 1
-                result = result .. charSet[index]
+            -- Add timestamp markers
+            result = result .. "🕰️"
+            for i = 1, #timeChars do
+                result = result .. timeChars[i]
             end
+            result = result .. "🕰️"
             
-            -- Add separator
-            result = result .. "⚜️"
-            
-            -- Encode the actual string with multiple layers
+            -- Now encode the actual string
             for i = 1, #str do
                 local char = string.sub(str, i, i)
                 local byte = string.byte(char)
                 
-                -- Apply key-based transformation
-                local keyChar = string.sub(key, (i % #key) + 1, (i % #key) + 1)
-                local keyByte = string.byte(keyChar)
+                -- Create a complex transformation based on position, key, and byte value
+                keyValue = (keyValue * 75) % 79 -- Prime number operations for better distribution
+                local transformedValue = (byte * 13 + keyValue * 29 + i * 7) % 80
                 
-                -- Complex transformation
-                local transformed = (byte * 3 + keyByte * 5 + seed + i) % 1000
+                -- Split into four indices to use different character sets
+                local index1 = (transformedValue % 20) + 1
+                local index2 = ((transformedValue + 17) % 20) + 21
+                local index3 = ((transformedValue + 37) % 20) + 41
+                local index4 = ((transformedValue + 59) % 20) + 61
                 
-                -- Split into three parts for more obfuscation
-                local part1 = transformed % 10
-                local part2 = math.floor(transformed / 10) % 10
-                local part3 = math.floor(transformed / 100)
+                -- Get characters from different sections of our character set
+                local char1 = charSet[index1]
+                local char2 = charSet[index2]
+                local char3 = charSet[index3]
+                local char4 = charSet[index4]
                 
-                -- Map each part to a different character set
-                local symbol1 = symbolSet1[(part1 + 1)]
-                local symbol2 = chineseSet[(part2 + 1)]
-                local symbol3 = runicSet[(part3 + 1)]
+                -- Add a position-based separator
+                local separator = (i % 5 == 0) and "✦" or 
+                                 (i % 5 == 1) and "✧" or
+                                 (i % 5 == 2) and "✪" or
+                                 (i % 5 == 3) and "✫" or "✬"
                 
-                -- Add to result with position-based separator
-                local separator = (i % 4 == 0) and "✦" or 
-                                 (i % 4 == 1) and "✧" or
-                                 (i % 4 == 2) and "✪" or "✫"
-                
-                result = result .. symbol1 .. symbol2 .. symbol3 .. separator
+                -- Add the encoded group
+                result = result .. char1 .. char2 .. char3 .. char4 .. separator
             end
             
-            -- Add verification code
-            local verificationCode = customHash(str .. key .. tostring(timestamp))
-            result = result .. "⚝✧" .. string.sub(verificationCode, 1, 8)
+            -- Add a verification signature
+            local verificationHash = secureHash(str .. tostring(key) .. tostring(timestamp))
+            local verificationChars = {}
+            local verStr = tostring(verificationHash)
+            for i = 1, math.min(8, #verStr) do
+                local digit = tonumber(string.sub(verStr, i, i))
+                verificationChars[i] = charSet[digit + 1]
+            end
+            
+            result = result .. "🔒"
+            for i = 1, #verificationChars do
+                result = result .. verificationChars[i]
+            end
+            result = result .. "🔒"
             
             return result
         end
         
-        local obfuscatedString = customObfuscate(whitelistString)
-        print("Generated whitelist string:", obfuscatedString)
-        return obfuscatedString
+        -- Generate the final whitelist string
+        local finalString = customEncode(whitelistString, hash)
+        print("Generated whitelist string:", finalString)
+        return finalString
     end,
     
     VerifyAccess = function(self, whitelistData)
@@ -216,75 +194,42 @@ local WhitelistSystem = {
         -- Check if the user's whitelist string is in the whitelist
         for _, whitelistedString in ipairs(whitelistData) do
             if whitelistedString == userWhitelistString then
-                print("✅ 访问已授权！您已通过验证。")
+                print("✅ Access granted! You are whitelisted.")
                 return true
             end
         end
         
-        print("❌ 访问被拒绝！您未获得授权。")
+        print("❌ Access denied! You are not whitelisted.")
         -- Copy the user's whitelist string to clipboard for easy whitelisting
         pcall(function()
             if setclipboard then
                 setclipboard(userWhitelistString)
-                print("您的授权码已复制到剪贴板。请联系开发者获取授权。")
+                print("Your whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
             elseif writeclipboard then
                 writeclipboard(userWhitelistString)
-                print("您的授权码已复制到剪贴板。请联系开发者获取授权。")
+                print("Your whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
             else
-                print("您的授权码: " .. userWhitelistString)
-                print("请使用此代码联系开发者获取授权。")
+                print("Your whitelist string: " .. userWhitelistString)
+                print("Contact the developer with this string to get whitelisted.")
             end
         end)
         
         return false
-    end,
-    
-    -- Admin tools for whitelist management
-    AdminTools = {
-        -- This function would be used by admins to decode a whitelist string
-        -- It's intentionally complex and incomplete to prevent reverse engineering
-        DecodePartial = function(obfuscatedString)
-            if not string.match(obfuscatedString, "^✧⚝") then
-                return "Invalid format"
-            end
-            
-            -- Extract the seed characters
-            local seedChar1 = string.sub(obfuscatedString, 3, 3)
-            local seedChar2 = string.sub(obfuscatedString, 4, 4)
-            
-            -- Calculate approximate seed
-            local seed = (string.byte(seedChar1) - 65) % 26
-            
-            -- Find the verification marker
-            local verificationPos = string.find(obfuscatedString, "⚝✧")
-            if not verificationPos then
-                return "Corrupted string"
-            end
-            
-            -- Extract verification code
-            local verificationCode = string.sub(obfuscatedString, verificationPos + 2)
-            
-            return {
-                seed = seed,
-                verificationCode = verificationCode,
-                isValid = #verificationCode == 8
-            }
-        end
-    }
+    end
 }
 
 -- Empty whitelist data for testing
 local whitelistData = {}
 
 -- Generate a whitelist string for the current user
-local userString = WhitelistSystem:GenerateWhitelistString()
-print("将此授权码添加到您的whitelist_data.lua文件中:")
+local userString = SecureWhitelist:GenerateWhitelistString()
+print("Add this string to your whitelist_data.lua file:")
 print(userString)
 
 -- Verify access (will fail since whitelist is empty)
-local hasAccess = WhitelistSystem:VerifyAccess(whitelistData)
+local hasAccess = SecureWhitelist:VerifyAccess(whitelistData)
 if hasAccess then
-    print("✅ 验证成功！您现在可以加载主脚本。")
+    print("Whitelist verification successful! You can now load your main script.")
 else
-    print("❌ 验证失败。请将您的授权码添加到白名单中。")
+    print("Whitelist verification failed. Please add your string to the whitelist.")
 end
