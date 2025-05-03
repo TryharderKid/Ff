@@ -5,7 +5,7 @@ local WhitelistSystem = {}
 WhitelistSystem.Config = {
     LocalFile = "Whitelist_System.lua",
     GitHubRawURL = "https://raw.githubusercontent.com/TryharderKid/Ff/main/Whitelist_Data.lua",
-    Debug = false
+    Debug = true  -- Enable debug mode to help troubleshoot
 }
 
 -- Debug print function
@@ -176,8 +176,8 @@ function WhitelistSystem:ObfuscateWhitelistString(whitelistString)
             local char4 = charSet[index4]
             
             -- Add a position-based separator
-            local separator = (i % 5 == 0) and "." or 
-                             (i % 5 == 1) and "_" or
+            local separator = (i % 5 == 0) and "." or
+                              (i % 5 == 1) and "_" or
                              (i % 5 == 2) and "-" or
                              (i % 5 == 3) and "+" or ":"
             
@@ -211,13 +211,15 @@ function WhitelistSystem:CreateLocalWhitelistFile()
     local originalWhitelist = self:GenerateWhitelistString()
     local obfuscatedWhitelist = self:ObfuscateWhitelistString(originalWhitelist)
     
+    debugPrint("Generated original whitelist: " .. originalWhitelist)
+    debugPrint("Generated obfuscated whitelist: " .. obfuscatedWhitelist)
+    
     local success, result = pcall(function()
         if writefile then
             local content = [[
 -- Whitelist System
 -- This file contains your whitelist information
 -- DO NOT MODIFY THIS FILE
-
 local WhitelistData = {
     -- Original unobfuscated whitelist string
     Original = "]] .. originalWhitelist .. [[",
@@ -225,9 +227,8 @@ local WhitelistData = {
     -- Obfuscated whitelist string
     Obfuscated = "]] .. obfuscatedWhitelist .. [["
 }
-
-return WhitelistData
-]]
+return WhitelistData]]
+            
             writefile(self.Config.LocalFile, content)
             return true
         else
@@ -285,8 +286,12 @@ end
 
 -- Fetch whitelist data from GitHub
 function WhitelistSystem:FetchWhitelistData()
+    debugPrint("Fetching whitelist data from: " .. self.Config.GitHubRawURL)
+    
     local success, result = pcall(function()
         local response = game:HttpGet(self.Config.GitHubRawURL)
+        
+        debugPrint("Received response from GitHub")
         
         -- Basic validation to ensure it's a Lua table
         if response:match("return%s*{") then
@@ -295,6 +300,7 @@ function WhitelistSystem:FetchWhitelistData()
             if func then
                 local whitelistData = func()
                 if type(whitelistData) == "table" then
+                    debugPrint("Successfully parsed whitelist data, entries: " .. #whitelistData)
                     return whitelistData
                 else
                     error("Whitelist data is not a table")
@@ -316,6 +322,46 @@ function WhitelistSystem:FetchWhitelistData()
     end
 end
 
+-- Debug function to help troubleshoot whitelist issues
+function WhitelistSystem:DebugWhitelistCheck()
+    -- Get local whitelist
+    local localWhitelist = self:LoadLocalWhitelistFile() or self:CreateLocalWhitelistFile()
+    
+    debugPrint("Local whitelist loaded/created")
+    debugPrint("Original: " .. string.sub(localWhitelist.original, 1, 30) .. "...")
+    debugPrint("Obfuscated: " .. string.sub(localWhitelist.obfuscated, 1, 30) .. "...")
+    
+    -- Fetch GitHub whitelist
+    local githubWhitelist = self:FetchWhitelistData()
+    
+    if not githubWhitelist then
+        debugPrint("ERROR: Could not fetch whitelist data from GitHub")
+        return false
+    end
+    
+    debugPrint("GitHub whitelist fetched, entries: " .. #githubWhitelist)
+    
+    -- Check each whitelist entry
+    for i, entry in ipairs(githubWhitelist) do
+        -- Trim any whitespace that might cause issues
+        entry = entry:gsub("^%s*(.-)%s*$", "%1")
+        
+        debugPrint("Checking whitelist entry #" .. i)
+        debugPrint("GitHub entry starts with: " .. string.sub(entry, 1, 30) .. "...")
+        
+        if entry == localWhitelist.original then
+            debugPrint("MATCH FOUND with original string!")
+            return true
+        elseif entry == localWhitelist.obfuscated then
+            debugPrint("MATCH FOUND with obfuscated string!")
+            return true
+        end
+    end
+    
+    debugPrint("No match found in whitelist database")
+    return false
+end
+
 -- Check if the user is whitelisted
 function WhitelistSystem:CheckWhitelist()
     -- First, try to load the local whitelist file
@@ -323,20 +369,21 @@ function WhitelistSystem:CheckWhitelist()
     
     -- If the local whitelist file doesn't exist or is invalid, create it
     if not localWhitelist then
+        debugPrint("Creating new local whitelist file...")
         localWhitelist = self:CreateLocalWhitelistFile()
         
         -- Copy the obfuscated whitelist to clipboard
         pcall(function()
             if setclipboard then
                 setclipboard(localWhitelist.obfuscated)
-                print("Your obfuscated whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
+                print("Your obfuscated whitelist string has been copied to clipboard.")
             elseif writeclipboard then
                 writeclipboard(localWhitelist.obfuscated)
-                print("Your obfuscated whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
+                print("Your obfuscated whitelist string has been copied to clipboard.")
             else
                 print("Your obfuscated whitelist string: " .. localWhitelist.obfuscated)
-                print("Contact the developer with this string to get whitelisted.")
             end
+            print("Contact the developer with this string to get whitelisted.")
         end)
     end
     
@@ -349,25 +396,50 @@ function WhitelistSystem:CheckWhitelist()
         return false
     end
     
+    debugPrint("Successfully fetched whitelist data, entries: " .. #githubWhitelist)
+    debugPrint("Checking if user is whitelisted...")
+    
     -- Check if the user's whitelist string is in the whitelist
-    for _, entry in ipairs(githubWhitelist) do
-        if entry == localWhitelist.original or entry == localWhitelist.obfuscated then
+    for i, entry in ipairs(githubWhitelist) do
+        -- Trim any whitespace that might cause issues
+        entry = entry:gsub("^%s*(.-)%s*$", "%1")
+        
+        debugPrint("Checking entry #" .. i .. ": " .. string.sub(entry, 1, 30) .. "...")
+        
+        -- Compare with both original and obfuscated strings
+        if entry == localWhitelist.original then
+            debugPrint("Match found with original string!")
+            return true
+        elseif entry == localWhitelist.obfuscated then
+            debugPrint("Match found with obfuscated string!")
+            return true
+        end
+        
+        -- Additional check: compare without any potential whitespace or invisible characters
+        local cleanEntry = entry:gsub("%s", "")
+        local cleanOriginal = localWhitelist.original:gsub("%s", "")
+        local cleanObfuscated = localWhitelist.obfuscated:gsub("%s", "")
+        
+        if cleanEntry == cleanOriginal or cleanEntry == cleanObfuscated then
+            debugPrint("Match found after cleaning whitespace!")
             return true
         end
     end
     
     -- If not whitelisted, copy the obfuscated whitelist to clipboard again
+    print("❌ Not whitelisted. Copying whitelist string to clipboard...")
+    
     pcall(function()
         if setclipboard then
             setclipboard(localWhitelist.obfuscated)
-            print("Your obfuscated whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
+            print("📋 Your obfuscated whitelist string has been copied to clipboard.")
         elseif writeclipboard then
             writeclipboard(localWhitelist.obfuscated)
-            print("Your obfuscated whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
+            print("📋 Your obfuscated whitelist string has been copied to clipboard.")
         else
-            print("Your obfuscated whitelist string: " .. localWhitelist.obfuscated)
-            print("Contact the developer with this string to get whitelisted.")
+            print("📋 Your obfuscated whitelist string: " .. localWhitelist.obfuscated)
         end
+        print("⚠️ Contact the developer with this string to get whitelisted.")
     end)
     
     return false
@@ -377,11 +449,28 @@ end
 function WhitelistSystem:Initialize()
     print("🔒 Initializing whitelist system...")
     
+    -- Run the debug check first to help troubleshoot
+    if self.Config.Debug then
+        print("🔍 Running debug check...")
+        self:DebugWhitelistCheck()
+    end
+    
     -- Check if the user is whitelisted
     local isWhitelisted = self:CheckWhitelist()
     
     if isWhitelisted then
         print("✅ Access granted! You are whitelisted.")
+        
+        -- Show a success notification in-game
+        pcall(function()
+            local StarterGui = game:GetService("StarterGui")
+            StarterGui:SetCore("SendNotification", {
+                Title = "Whitelist Check Passed",
+                Text = "You are whitelisted. Enjoy!",
+                Duration = 5
+            })
+        end)
+        
         return true
     else
         print("❌ Access denied! You are not whitelisted.")
@@ -398,6 +487,37 @@ function WhitelistSystem:Initialize()
         
         return false
     end
+end
+
+-- Add a function to manually add a user to the whitelist file (for testing)
+function WhitelistSystem:AddToLocalWhitelist(whitelistString)
+    local success, result = pcall(function()
+        if readfile and writefile and isfile and isfile(self.Config.LocalFile) then
+            local content = readfile(self.Config.LocalFile)
+            local func, err = loadstring(content)
+            if func then
+                local whitelistData = func()
+                if type(whitelistData) == "table" then
+                    -- Add the new whitelist string
+                    table.insert(whitelistData, whitelistString)
+                    
+                    -- Write the updated whitelist back to the file
+                    local newContent = "return " .. game:GetService("HttpService"):JSONEncode(whitelistData)
+                    writefile(self.Config.LocalFile, newContent)
+                    
+                    return true
+                else
+                    error("Invalid whitelist data format")
+                end
+            else
+                error("Failed to parse whitelist data: " .. tostring(err))
+            end
+        else
+            error("Whitelist file does not exist")
+        end
+    end)
+    
+    return success
 end
 
 -- Return the whitelist system
