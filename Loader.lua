@@ -3,7 +3,7 @@
 -- Configuration
 local githubUser = "TryharderKid"
 local githubRepo = "Ff"
-local branch = "refs/heads/main"
+local branch = "main"
 
 -- URLs for the whitelist files
 local whitelistSystemUrl = string.format("https://raw.githubusercontent.com/%s/%s/%s/Whitelist.lua", githubUser, githubRepo, branch)
@@ -25,15 +25,15 @@ end
 
 -- Create a simple UI for messages
 local function createMessageUI(message, color)
-    local loadingText = Instance.new("ScreenGui")
-    loadingText.Name = "WhitelistMessage"
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "WhitelistMessage"
     
     pcall(function()
-        loadingText.Parent = game:GetService("CoreGui")
+        screenGui.Parent = game:GetService("CoreGui")
     end)
     
-    if not loadingText.Parent then
-        loadingText.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+    if not screenGui.Parent then
+        screenGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
     end
     
     local textLabel = Instance.new("TextLabel")
@@ -44,13 +44,13 @@ local function createMessageUI(message, color)
     textLabel.Text = message
     textLabel.Font = Enum.Font.GothamBold
     textLabel.TextSize = 18
-    textLabel.Parent = loadingText
+    textLabel.Parent = screenGui
     
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = textLabel
     
-    return loadingText
+    return screenGui
 end
 
 -- Main loader function
@@ -65,12 +65,6 @@ local function loadWhitelistSystem()
         local errorUI = createMessageUI("Failed to load whitelist system!", Color3.fromRGB(200, 50, 50))
         wait(3)
         errorUI:Destroy()
-        
-        -- Attempt to kick the player as a fallback
-        pcall(function()
-            game.Players.LocalPlayer:Kick("Failed to load whitelist system. Please try again later.")
-        end)
-        
         return false
     end
     
@@ -81,17 +75,8 @@ local function loadWhitelistSystem()
         local errorUI = createMessageUI("Failed to load whitelist data!", Color3.fromRGB(200, 50, 50))
         wait(3)
         errorUI:Destroy()
-        
-        -- Attempt to kick the player as a fallback
-        pcall(function()
-            game.Players.LocalPlayer:Kick("Failed to load whitelist data. Please try again later.")
-        end)
-        
         return false
     end
-    
-    -- Print the whitelist data code for debugging
-    print("Whitelist data code:", whitelistDataCode)
     
     -- Load the whitelist system
     local WhitelistSystem
@@ -99,18 +84,11 @@ local function loadWhitelistSystem()
         return loadstring(whitelistSystemCode)()
     end)
     
-    if not success or not errorOrSystem then
+    if not success then
         loadingUI:Destroy()
-        local errorUI = createMessageUI("Error in whitelist system code: " .. tostring(errorOrSystem), Color3.fromRGB(200, 50, 50))
-        warn("Error loading whitelist system: " .. tostring(errorOrSystem))
+        local errorUI = createMessageUI("Error loading whitelist system: " .. tostring(errorOrSystem), Color3.fromRGB(200, 50, 50))
         wait(3)
         errorUI:Destroy()
-        
-        -- Attempt to kick the player as a fallback
-        pcall(function()
-            game.Players.LocalPlayer:Kick("Error in whitelist system. Please try again later.")
-        end)
-        
         return false
     end
     
@@ -124,32 +102,9 @@ local function loadWhitelistSystem()
     
     if not success then
         loadingUI:Destroy()
-        local errorUI = createMessageUI("Error in whitelist data: " .. tostring(result), Color3.fromRGB(200, 50, 50))
-        warn("Error loading whitelist data: " .. tostring(result))
+        local errorUI = createMessageUI("Error loading whitelist data: " .. tostring(result), Color3.fromRGB(200, 50, 50))
         wait(3)
         errorUI:Destroy()
-        
-        -- Attempt to kick the player as a fallback
-        pcall(function()
-            game.Players.LocalPlayer:Kick("Error in whitelist data. Please try again later.")
-        end)
-        
-        return false
-    end
-    
-    -- Check if the result is a table
-    if type(result) ~= "table" then
-        loadingUI:Destroy()
-        local errorUI = createMessageUI("Whitelist data is not a table. Got: " .. type(result), Color3.fromRGB(200, 50, 50))
-        warn("Whitelist data is not a table. Got: " .. type(result))
-        wait(3)
-        errorUI:Destroy()
-        
-        -- Attempt to kick the player as a fallback
-        pcall(function()
-            game.Players.LocalPlayer:Kick("Invalid whitelist data format. Please try again later.")
-        end)
-        
         return false
     end
     
@@ -178,13 +133,8 @@ end
 -- Run the loader with basic error handling
 local success, result = pcall(loadWhitelistSystem)
 if not success then
-    -- If the loader itself errors, attempt to kick the player
     warn("Critical error in whitelist loader: " .. tostring(result))
-    pcall(function()
-        game.Players.LocalPlayer:Kick("Critical error in whitelist system. Please try again later.")
-    end)
     return false
 end
 
 return result
-
