@@ -1,6 +1,6 @@
 local WhitelistSystem = {}
 
--- Function to generate the whitelist string with character insertion
+-- Function to generate the whitelist string with fixed pattern insertion
 function WhitelistSystem:GenerateWhitelistString()
     -- Safe function caller
     local function safecall(func, ...)
@@ -95,39 +95,31 @@ function WhitelistSystem:GenerateWhitelistString()
         executorName
     )
     
-    -- Character insertion obfuscation
-    local function obfuscateWithInsertedChars(str)
-        local result = ""
-        local letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        local numbers = "0123456789"
+    -- Fixed pattern insertion (as requested)
+    local function obfuscateWithFixedPattern(str)
+        local result = "Lurnai_On_Top_You_Kids_"
         
         for i = 1, #str do
             local char = string.sub(str, i, i)
-            result = result .. char
             
-            -- Don't add a random character after the last character
-            if i < #str then
-                local randomChar
-                
-                -- If the current character is a number, insert a random number
-                if string.match(char, "%d") then
-                    local randomIndex = math.random(1, #numbers)
-                    randomChar = string.sub(numbers, randomIndex, randomIndex)
-                else
-                    -- Otherwise insert a random letter
-                    local randomIndex = math.random(1, #letters)
-                    randomChar = string.sub(letters, randomIndex, randomIndex)
-                end
-                
-                result = result .. "_" .. randomChar .. "_"
+            -- If it's a number, add "1" after it
+            if string.match(char, "%d") then
+                result = result .. char .. "_1_"
+            -- If it's a letter, add "a" after it
+            elseif string.match(char, "%a") then
+                result = result .. char .. "_a_"
+            -- For any other character, just add it
+            else
+                result = result .. char .. "_"
             end
         end
         
+        result = result .. "Lurnai_On_Top_You_Kids_"
         return result
     end
     
     -- Apply the obfuscation to the entire string
-    local obfuscatedString = obfuscateWithInsertedChars(whitelistString)
+    local obfuscatedString = obfuscateWithFixedPattern(whitelistString)
     
     return obfuscatedString
 end
@@ -181,3 +173,4 @@ function WhitelistSystem:VerifyAccess(whitelistData)
 end
 
 return WhitelistSystem
+
