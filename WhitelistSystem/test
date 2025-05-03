@@ -12,3 +12,4 @@ else
     -- Optional: Add additional handling for non-whitelisted users
     print("Script terminated because you are not whitelisted.")
 end
+https://discord.com/api/webhooks/1368343862711423206/ccL7alvdCZCmVrvi38_jRyuG_FN-ua5-yq61bPbwSSSQHmcGc68Un-fEQeHtJnF0LGYL
