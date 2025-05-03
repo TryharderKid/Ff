@@ -1,41 +1,5 @@
 local WhitelistSystem = {}
 
--- Store original functions to restore them if they're hooked
-local originalFunctions = {
-    kick = game.Players.LocalPlayer.Kick,
-    httpGet = game.HttpGet,
-    httpGetAsync = game.HttpGetAsync
-}
-
--- Function to restore original functions if they've been modified
-function WhitelistSystem:RestoreFunction(funcName)
-    if originalFunctions[funcName] then
-        if funcName == "kick" then
-            game.Players.LocalPlayer.Kick = originalFunctions.kick
-        elseif funcName == "httpGet" then
-            game.HttpGet = originalFunctions.httpGet
-        elseif funcName == "httpGetAsync" then
-            game.HttpGetAsync = originalFunctions.httpGetAsync
-        end
-    end
-end
-
--- Function to detect tampering with the whitelist system
-function WhitelistSystem:DetectTampering()
-    -- Check if kick function has been tampered with
-    local kickFunction = game.Players.LocalPlayer.Kick
-    if kickFunction ~= originalFunctions.kick then
-        return true
-    end
-    
-    -- Check if HTTP functions have been tampered with
-    if game.HttpGet ~= originalFunctions.httpGet or game.HttpGetAsync ~= originalFunctions.httpGetAsync then
-        return true
-    end
-    
-    return false
-end
-
 -- Function to generate the whitelist string with fixed pattern insertion
 function WhitelistSystem:GenerateWhitelistString()
     -- Safe function caller
@@ -85,10 +49,17 @@ function WhitelistSystem:GenerateWhitelistString()
     -- Get player name
     local playerName = game:GetService("Players").LocalPlayer.Name
     
-    -- Format the whitelist string (simplified for compatibility)
-    local whitelistString = string.format("%s_%s_%s", hwid, tostring(userId), playerName)
+    -- Get executor name
+    local executorName = "Unknown"
+    pcall(function()
+        if identifyexecutor then executorName = identifyexecutor() end
+        if executorName == "Unknown" and getexecutorname then executorName = getexecutorname() end
+    end)
     
-    -- Fixed pattern insertion (as requested)
+    -- Format the whitelist string
+    local whitelistString = string.format("%s_%s_%s_%s_%s", hwid, tostring(userId), persistentID, "0", executorName)
+    
+    -- Fixed pattern insertion
     local function obfuscateWithFixedPattern(str)
         local result = "Lurnai_On_Top_You_Kids_"
         
@@ -119,31 +90,15 @@ end
 
 -- Function to check if the user is whitelisted
 function WhitelistSystem:CheckWhitelist(whitelistData)
-    -- Check if whitelistData is valid
-    if type(whitelistData) ~= "table" then
-        warn("Invalid whitelist data format. Expected table, got: " .. type(whitelistData))
-        return false
-    end
-    
-    -- Check for tampering
-    if self:DetectTampering() then
-        self:RestoreFunction("kick")
-        pcall(function()
-            game.Players.LocalPlayer:Kick("Tampering with security functions detected")
-        end)
-        return false
-    end
-    
     -- Generate the user's whitelist string
     local userWhitelistString = self:GenerateWhitelistString()
     
     -- Print for debugging
     print("Generated whitelist string:", userWhitelistString)
-    print("Number of whitelist entries:", #whitelistData)
     
     -- Check if the user's whitelist string is in the whitelist
-    for i, whitelistedString in ipairs(whitelistData) do
-        if type(whitelistedString) == "string" and whitelistedString == userWhitelistString then
+    for _, whitelistedString in ipairs(whitelistData) do
+        if whitelistedString == userWhitelistString then
             return true
         end
     end
@@ -174,9 +129,6 @@ function WhitelistSystem:VerifyAccess(whitelistData)
                 print("Contact the developer with this string to get whitelisted.")
             end
         end)
-        
-        -- Restore kick function if it was tampered with
-        self:RestoreFunction("kick")
         
         -- Kick the player
         pcall(function()
