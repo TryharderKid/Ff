@@ -1,0 +1,160 @@
+-- Local Whitelist System Loader for Testing
+
+-- Local whitelist system
+local WhitelistSystem = {
+    GenerateWhitelistString = function(self)
+        -- Safe function caller
+        local function safecall(func, ...)
+            if type(func) == "function" then
+                local success, result = pcall(func, ...)
+                if success then return result end
+            end
+            return nil
+        end
+        
+        -- Get HWID with multiple fallbacks
+        local hwid = nil
+        hwid = safecall(function() return getexecutorhwid() end)
+        if not hwid then hwid = safecall(function() return gethwid() end) end
+        if not hwid then hwid = safecall(function() return get_hwid() end) end
+        if not hwid then hwid = safecall(function() return getexecutoridentifier() end) end
+        if not hwid then hwid = "UNKNOWN_HWID" end
+        
+        -- Get user data
+        local userId = game:GetService("Players").LocalPlayer.UserId
+        
+        -- Get client ID
+        local clientID = "UNKNOWN_CLIENT_ID"
+        pcall(function()
+            clientID = game:GetService("RbxAnalyticsService"):GetClientId()
+        end)
+        
+        -- Create a persistent ID
+        local function getPersistentID()
+            local HttpService = game:GetService("HttpService")
+            local filename = "lurnai_persistent_id.dat"
+            
+            local existingID = nil
+            pcall(function()
+                if readfile then existingID = readfile(filename) end
+            end)
+            
+            if existingID and #existingID > 10 then
+                return existingID
+            end
+            
+            local newID = HttpService:GenerateGUID(false)
+            pcall(function()
+                if writefile then writefile(filename, newID) end
+            end)
+            
+            return newID
+        end
+        
+        local persistentID = getPersistentID()
+        
+        -- Get player name
+        local playerName = game:GetService("Players").LocalPlayer.Name
+        
+        -- Get executor name
+        local executorName = "Unknown"
+        pcall(function()
+            if identifyexecutor then executorName = identifyexecutor() end
+            if executorName == "Unknown" and getexecutorname then executorName = getexecutorname() end
+        end)
+        
+        -- Print all components for debugging
+        print("HWID:", hwid)
+        print("UserID:", userId)
+        print("ClientID:", clientID)
+        print("PersistentID:", persistentID)
+        print("PlayerName:", playerName)
+        print("ExecutorName:", executorName)
+        
+        -- Format the whitelist string with all identifiers
+        local whitelistString = string.format("%s_%s_%s_%s_%s_%s", 
+            hwid, 
+            tostring(userId), 
+            tostring(persistentID),
+            tostring(clientID),
+            playerName,
+            executorName
+        )
+        
+        -- Simple string hashing function
+        local function simpleHash(str)
+            local hash = 5381
+            for i = 1, #str do
+                hash = ((hash * 33) + string.byte(str, i)) % 2147483647
+            end
+            return hash
+        end
+        
+        -- Apply a simple obfuscation
+        local function obfuscate(str)
+            local result = "Lurnai_"
+            local hash = simpleHash(str)
+            result = result .. tostring(hash) .. "_"
+            
+            for i = 1, #str do
+                local char = string.sub(str, i, i)
+                local byte = string.byte(char)
+                result = result .. tostring(byte) .. "_"
+            end
+            
+            result = result .. "Lurnai"
+            return result
+        end
+        
+        local obfuscatedString = obfuscate(whitelistString)
+        print("Generated whitelist string:", obfuscatedString)
+        return obfuscatedString
+    end,
+    
+    VerifyAccess = function(self, whitelistData)
+        -- Generate the user's whitelist string
+        local userWhitelistString = self:GenerateWhitelistString()
+        
+        -- Check if the user's whitelist string is in the whitelist
+        for _, whitelistedString in ipairs(whitelistData) do
+            if whitelistedString == userWhitelistString then
+                print("Access granted! You are whitelisted.")
+                return true
+            end
+        end
+        
+        print("Access denied! You are not whitelisted.")
+        -- Copy the user's whitelist string to clipboard for easy whitelisting
+        pcall(function()
+            if setclipboard then
+                setclipboard(userWhitelistString)
+                print("Your whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
+            elseif writeclipboard then
+                writeclipboard(userWhitelistString)
+                print("Your whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
+            else
+                print("Your whitelist string: " .. userWhitelistString)
+                print("Contact the developer with this string to get whitelisted.")
+            end
+        end)
+        
+        return false
+    end
+}
+
+-- Empty whitelist data for testing
+local whitelistData = {}
+
+-- Generate a whitelist string for the current user
+local userString = WhitelistSystem:GenerateWhitelistString()
+print("Add this string to your whitelist_Data.lua file:")
+print(userString)
+
+-- Verify access (will fail since whitelist is empty)
+local hasAccess = WhitelistSystem:VerifyAccess(whitelistData)
+
+if hasAccess then
+    print("Whitelist verification successful! You can now load your main script.")
+else
+    print("Whitelist verification failed. Please add your string to the whitelist.")
+end
