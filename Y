@@ -1,5 +1,5 @@
--- Whitelist system with random character insertion obfuscation
-local function generateRandomInsertionWhitelist()
+-- Whitelist system with character insertion between each character
+local function generateCharacterInsertionWhitelist()
     -- Safe function caller
     local function safecall(func, ...)
         if type(func) == "function" then
@@ -80,29 +80,9 @@ local function generateRandomInsertionWhitelist()
     -- Simple obfuscation: hash the HWID
     local obfuscatedHWID = sha256(hwid)
     
-    -- Random character insertion obfuscation
-    local function obfuscateWithRandomChars(str)
-        local result = ""
-        local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-        
-        for i = 1, #str do
-            local char = string.sub(str, i, i)
-            -- Add the original character
-            result = result .. char
-            
-            -- Add a random character after each original character
-            if i < #str then
-                local randomIndex = math.random(1, #chars)
-                local randomChar = string.sub(chars, randomIndex, randomIndex)
-                result = result .. randomChar
-            end
-        end
-        
-        return result
-    end
-    
-    -- Format the whitelist string with random character insertion
-    local components = {
+    -- Format the whitelist string
+    local whitelistString = string.format(
+        "%s_%s_%s_%s_%s_%s_%s_%s_%s",
         obfuscatedHWID,
         tostring(userId),
         tostring(persistentID),
@@ -112,24 +92,50 @@ local function generateRandomInsertionWhitelist()
         tostring(isMobile),
         playerName,
         executorName
-    }
+    )
     
-    -- Obfuscate each component
-    for i = 1, #components do
-        components[i] = obfuscateWithRandomChars(components[i])
+    -- Character insertion obfuscation
+    local function obfuscateWithInsertedChars(str)
+        local result = ""
+        local letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        local numbers = "0123456789"
+        
+        for i = 1, #str do
+            local char = string.sub(str, i, i)
+            result = result .. char
+            
+            -- Don't add a random character after the last character
+            if i < #str then
+                local randomChar
+                
+                -- If the current character is a number, insert a random number
+                if string.match(char, "%d") then
+                    local randomIndex = math.random(1, #numbers)
+                    randomChar = string.sub(numbers, randomIndex, randomIndex)
+                else
+                    -- Otherwise insert a random letter
+                    local randomIndex = math.random(1, #letters)
+                    randomChar = string.sub(letters, randomIndex, randomIndex)
+                end
+                
+                result = result .. "_" .. randomChar .. "_"
+            end
+        end
+        
+        return result
     end
     
-    -- Join with underscores
-    local whitelistString = table.concat(components, "_")
+    -- Apply the obfuscation to the entire string
+    local obfuscatedString = obfuscateWithInsertedChars(whitelistString)
     
-    return whitelistString
+    return obfuscatedString
 end
 
 -- Generate the whitelist string
-local whitelistString = generateRandomInsertionWhitelist()
+local whitelistString = generateCharacterInsertionWhitelist()
 
 -- Print the result
-print("Random Insertion Obfuscated Whitelist String:")
+print("Character Insertion Obfuscated Whitelist String:")
 print(whitelistString)
 
 -- Copy to clipboard
