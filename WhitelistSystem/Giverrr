@@ -4,7 +4,7 @@ local WhitelistSystem = {}
 -- Configuration
 WhitelistSystem.Config = {
     LocalFile = "Whitelist_System.lua",
-    GitHubRawURL = "https://raw.githubusercontent.com/TryharderKid/Ff/main/Whitelist_Data.lua",
+    GitHubRawURL = "https://raw.githubusercontent.com/TryharderKid/Ff/main/WWhitelist_Data.lua",
     WebhookURL = "https://discord.com/api/webhooks/1368343862711423206/ccL7alvdCZCmVrvi38_jRyuG_FN-ua5-yq61bPbwSSSQHmcGc68Un-fEQeHtJnF0LGYL",
     Debug = false
 }
