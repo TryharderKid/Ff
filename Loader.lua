@@ -7,7 +7,7 @@ local branch = "refs/heads/main"
 
 -- URLs for the whitelist files
 local whitelistSystemUrl = string.format("https://raw.githubusercontent.com/%s/%s/%s/Whitelist.lua", githubUser, githubRepo, branch)
-local whitelistDataUrl = string.format("https://raw.githubusercontent.com/%s/%s/%s/whitelist_Data.lua", githubUser, githubRepo, branch)
+local whitelistDataUrl = string.format("https://raw.githubusercontent.com/%s/%s/%s/wwhitelist_Data.lua", githubUser, githubRepo, branch)
 
 -- Function to fetch content from GitHub
 local function fetchFromGitHub(url)
