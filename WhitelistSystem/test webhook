@@ -1,0 +1,192 @@
+-- Simple test script for the webhook system
+local WebhookSystem = {}
+
+-- Configuration
+WebhookSystem.Config = {
+    WebhookURL = "https://discord.com/api/webhooks/1368343862711423206/ccL7alvdCZCmVrvi38_jRyuG_FN-ua5-yq61bPbwSSSQHmcGc68Un-fEQeHtJnF0LGYL",
+    Debug = true
+}
+
+-- Debug print function
+local function debugPrint(...)
+    if WebhookSystem.Config.Debug then
+        print("[Webhook Test]", ...)
+    end
+end
+
+-- Send a simple webhook
+function WebhookSystem:SendSimpleWebhook()
+    debugPrint("Sending simple webhook test...")
+    
+    -- Get player information
+    local player = game:GetService("Players").LocalPlayer
+    local userId = player.UserId
+    local username = player.Name
+    
+    -- Simple webhook data
+    local webhookData = {
+        content = "Webhook Test from " .. username,
+        embeds = {
+            {
+                title = "Webhook Test",
+                description = "This is a test of the webhook system",
+                color = 5814783,
+                fields = {
+                    {
+                        name = "Username",
+                        value = username,
+                        inline = true
+                    },
+                    {
+                        name = "User ID",
+                        value = tostring(userId),
+                        inline = true
+                    },
+                    {
+                        name = "Game",
+                        value = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name,
+                        inline = true
+                    }
+                },
+                timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+            }
+        }
+    }
+    
+    -- Try multiple HTTP request methods
+    local success = false
+    local errorMessages = {}
+    
+    -- Method 1: syn.request
+    if not success and syn and syn.request then
+        debugPrint("Trying syn.request method...")
+        local status, result = pcall(function()
+            local response = syn.request({
+                Url = self.Config.WebhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = game:GetService("HttpService"):JSONEncode(webhookData)
+            })
+            
+            debugPrint("syn.request response: " .. tostring(response.StatusCode))
+            return response
+        end)
+        
+        if status then
+            if result.StatusCode == 200 or result.StatusCode == 204 then
+                success = true
+                debugPrint("syn.request succeeded!")
+            else
+                table.insert(errorMessages, "syn.request failed with status code: " .. tostring(result.StatusCode))
+            end
+        else
+            table.insert(errorMessages, "syn.request error: " .. tostring(result))
+        end
+    end
+    
+    -- Method 2: http_request
+    if not success and http_request then
+        debugPrint("Trying http_request method...")
+        local status, result = pcall(function()
+            local response = http_request({
+                Url = self.Config.WebhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = game:GetService("HttpService"):JSONEncode(webhookData)
+            })
+            
+            debugPrint("http_request response: " .. tostring(response.StatusCode))
+            return response
+        end)
+        
+        if status then
+            if result.StatusCode == 200 or result.StatusCode == 204 then
+                success = true
+                debugPrint("http_request succeeded!")
+            else
+                table.insert(errorMessages, "http_request failed with status code: " .. tostring(result.StatusCode))
+            end
+        else
+            table.insert(errorMessages, "http_request error: " .. tostring(result))
+        end
+    end
+    
+    -- Method 3: request
+    if not success and request then
+        debugPrint("Trying request method...")
+        local status, result = pcall(function()
+            local response = request({
+                Url = self.Config.WebhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = game:GetService("HttpService"):JSONEncode(webhookData)
+            })
+            
+            debugPrint("request response: " .. tostring(response.StatusCode))
+            return response
+        end)
+        
+        if status then
+            if result.StatusCode == 200 or result.StatusCode == 204 then
+                success = true
+                debugPrint("request succeeded!")
+            else
+                table.insert(errorMessages, "request failed with status code: " .. tostring(result.StatusCode))
+            end
+        else
+            table.insert(errorMessages, "request error: " .. tostring(result))
+        end
+    end
+    
+    -- Method 4: HttpService
+    if not success then
+        debugPrint("Trying HttpService method...")
+        local status, result = pcall(function()
+            local HttpService = game:GetService("HttpService")
+            local response = HttpService:RequestAsync({
+                Url = self.Config.WebhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = HttpService:JSONEncode(webhookData)
+            })
+            
+            debugPrint("HttpService response: " .. tostring(response.StatusCode))
+            return response
+        end)
+        
+        if status then
+            if result.StatusCode == 200 or result.StatusCode == 204 then
+                success = true
+                debugPrint("HttpService succeeded!")
+            else
+                table.insert(errorMessages, "HttpService failed with status code: " .. tostring(result.StatusCode))
+            end
+        else
+            table.insert(errorMessages, "HttpService error: " .. tostring(result))
+        end
+    end
+    
+    if success then
+        debugPrint("Successfully sent webhook test!")
+        return true
+    else
+        debugPrint("Failed to send webhook test after trying all methods.")
+        for i, error in ipairs(errorMessages) do
+            debugPrint("Error " .. i .. ": " .. error)
+        end
+        return false
+    end
+end
+
+-- Run the test
+WebhookSystem:SendSimpleWebhook()
+
+return WebhookSystem
