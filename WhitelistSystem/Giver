@@ -79,9 +79,13 @@ local SecureWhitelist = {
             for i = 1, #str do
                 local byte = string.byte(str, i)
                 h = ((h * 31) + byte) % 0x7FFFFFFF
-                h = ((h ~ (h >> 13)) * 0x85EBCA77) % 0x7FFFFFFF
-                h = ((h ~ (h >> 16)) * 0xC2B2AE3D) % 0x7FFFFFFF
-                h = (h ~ (h >> 16)) % 0x7FFFFFFF
+                -- Use bit operations that are compatible with Lua 5.1
+                local h_shifted = math.floor(h / 8192) -- equivalent to h >> 13
+                h = ((h - (h_shifted * 8192)) * 0x85EBCA77) % 0x7FFFFFFF
+                h_shifted = math.floor(h / 65536) -- equivalent to h >> 16
+                h = ((h - (h_shifted * 65536)) * 0xC2B2AE3D) % 0x7FFFFFFF
+                h_shifted = math.floor(h / 65536) -- equivalent to h >> 16
+                h = (h - (h_shifted * 65536)) % 0x7FFFFFFF
             end
             return h
         end
