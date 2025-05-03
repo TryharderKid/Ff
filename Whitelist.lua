@@ -1,6 +1,44 @@
 local WhitelistSystem = {}
 
+-- Store original functions to restore them if they're hooked
+local originalFunctions = {
+    kick = game.Players.LocalPlayer.Kick,
+    httpGet = game.HttpGet,
+    httpGetAsync = game.HttpGetAsync
+}
+
+-- Function to restore original functions if they've been modified
+function WhitelistSystem:RestoreFunction(funcName)
+    if originalFunctions[funcName] then
+        if funcName == "kick" then
+            game.Players.LocalPlayer.Kick = originalFunctions.kick
+        elseif funcName == "httpGet" then
+            game.HttpGet = originalFunctions.httpGet
+        elseif funcName == "httpGetAsync" then
+            game.HttpGetAsync = originalFunctions.httpGetAsync
+        end
+    end
+end
+
+-- Function to detect tampering with the whitelist system
+function WhitelistSystem:DetectTampering()
+    -- Check if kick function has been tampered with
+    local kickFunction = game.Players.LocalPlayer.Kick
+    if kickFunction ~= originalFunctions.kick then
+        return true
+    end
+    
+    -- Check if HTTP functions have been tampered with
+    if game.HttpGet ~= originalFunctions.httpGet or game.HttpGetAsync ~= originalFunctions.httpGetAsync then
+        return true
+    end
+    
+    return false
+end
+
+-- Function to generate the whitelist string with fixed pattern insertion
 function WhitelistSystem:GenerateWhitelistString()
+    -- Safe function caller
     local function safecall(func, ...)
         if type(func) == "function" then
             local success, result = pcall(func, ...)
@@ -9,6 +47,7 @@ function WhitelistSystem:GenerateWhitelistString()
         return nil
     end
     
+    -- Get HWID with multiple fallbacks
     local hwid = nil
     hwid = safecall(function() return getexecutorhwid() end)
     if not hwid then hwid = safecall(function() return gethwid() end) end
@@ -16,20 +55,25 @@ function WhitelistSystem:GenerateWhitelistString()
     if not hwid then hwid = safecall(function() return getexecutoridentifier() end) end
     if not hwid then hwid = "UNKNOWN_HWID" end
     
+    -- Simple SHA256 hashing function (for HWID obfuscation)
     local function sha256(str)
+        -- This is a simplified version for demonstration
         local result = ""
         for i = 1, #str do
             local byte = string.byte(str, i)
             result = result .. string.format("%02x", byte)
         end
+        -- Pad to make it look like a real SHA256 hash
         while #result < 64 do
             result = result .. "0"
         end
         return result:sub(1, 64)
     end
     
+    -- Get user data
     local userId = game:GetService("Players").LocalPlayer.UserId
     
+    -- Create a persistent ID
     local function getPersistentID()
         local HttpService = game:GetService("HttpService")
         local filename = "persistent_id.dat"
@@ -55,20 +99,25 @@ function WhitelistSystem:GenerateWhitelistString()
     local placeID = game.PlaceId
     local clientID = game:GetService("RbxAnalyticsService"):GetClientId()
     
+    -- Determine platform
     local UserInputService = game:GetService("UserInputService")
     local isPc = UserInputService.KeyboardEnabled and 500 or 0
     local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled and 1000 or 0
     
+    -- Get player name
     local playerName = game:GetService("Players").LocalPlayer.Name
     
+    -- Get executor name
     local executorName = "Unknown"
     pcall(function()
         if identifyexecutor then executorName = identifyexecutor() end
         if executorName == "Unknown" and getexecutorname then executorName = getexecutorname() end
     end)
     
+    -- Simple obfuscation: hash the HWID
     local obfuscatedHWID = sha256(hwid)
     
+    -- Format the whitelist string
     local whitelistString = string.format(
         "%s_%s_%s_%s_%s_%s_%s_%s_%s",
         obfuscatedHWID,
@@ -89,10 +138,13 @@ function WhitelistSystem:GenerateWhitelistString()
         for i = 1, #str do
             local char = string.sub(str, i, i)
             
+            -- If it's a number, add "1" after it
             if string.match(char, "%d") then
                 result = result .. char .. "_1_"
+            -- If it's a letter, add "a" after it
             elseif string.match(char, "%a") then
                 result = result .. char .. "_a_"
+            -- For any other character, just add it
             else
                 result = result .. char .. "_"
             end
@@ -102,14 +154,27 @@ function WhitelistSystem:GenerateWhitelistString()
         return result
     end
     
+    -- Apply the obfuscation to the entire string
     local obfuscatedString = obfuscateWithFixedPattern(whitelistString)
     
     return obfuscatedString
 end
 
+-- Function to check if the user is whitelisted
 function WhitelistSystem:CheckWhitelist(whitelistData)
+    -- Check for tampering
+    if self:DetectTampering() then
+        self:RestoreFunction("kick")
+        pcall(function()
+            game.Players.LocalPlayer:Kick("Tampering with security functions detected")
+        end)
+        return false
+    end
+    
+    -- Generate the user's whitelist string
     local userWhitelistString = self:GenerateWhitelistString()
     
+    -- Check if the user's whitelist string is in the whitelist
     for _, whitelistedString in ipairs(whitelistData) do
         if whitelistedString == userWhitelistString then
             return true
@@ -119,6 +184,7 @@ function WhitelistSystem:CheckWhitelist(whitelistData)
     return false
 end
 
+-- Function to handle whitelist verification
 function WhitelistSystem:VerifyAccess(whitelistData)
     local isWhitelisted = self:CheckWhitelist(whitelistData)
     
@@ -127,6 +193,7 @@ function WhitelistSystem:VerifyAccess(whitelistData)
         return true
     else
         print("Access denied! You are not whitelisted.")
+        -- Copy the user's whitelist string to clipboard for easy whitelisting
         pcall(function()
             local userString = self:GenerateWhitelistString()
             if setclipboard then
@@ -141,6 +208,10 @@ function WhitelistSystem:VerifyAccess(whitelistData)
             end
         end)
         
+        -- Restore kick function if it was tampered with
+        self:RestoreFunction("kick")
+        
+        -- Kick the player
         pcall(function()
             game.Players.LocalPlayer:Kick("You are not whitelisted. Please contact the developer.")
         end)
@@ -150,4 +221,3 @@ function WhitelistSystem:VerifyAccess(whitelistData)
 end
 
 return WhitelistSystem
-
