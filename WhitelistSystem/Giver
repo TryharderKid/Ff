@@ -1,9 +1,9 @@
--- Simple Whitelist System with GitHub Integration
+-- Advanced Whitelist System with GitHub Integration
 local WhitelistSystem = {}
 
 -- Configuration
 WhitelistSystem.Config = {
-    LocalFile = "whitelist_data.lua",
+    LocalFile = "Whitelist_System.lua",
     GitHubRawURL = "https://raw.githubusercontent.com/TryharderKid/Ff/main/Whitelist_Data.lua",
     Debug = false
 }
@@ -90,6 +90,199 @@ function WhitelistSystem:GenerateWhitelistString()
     return whitelistString
 end
 
+-- Obfuscate the whitelist string
+function WhitelistSystem:ObfuscateWhitelistString(whitelistString)
+    -- Create a secure hash
+    local function secureHash(str)
+        local h = 0x21F4A3B7
+        for i = 1, #str do
+            local byte = string.byte(str, i)
+            h = ((h * 31) + byte) % 0x7FFFFFFF
+            local h_shifted = math.floor(h / 8192)
+            h = ((h - (h_shifted * 8192)) * 0x85EBCA77) % 0x7FFFFFFF
+            h_shifted = math.floor(h / 65536)
+            h = ((h - (h_shifted * 65536)) * 0xC2B2AE3D) % 0x7FFFFFFF
+            h_shifted = math.floor(h / 65536)
+            h = (h - (h_shifted * 65536)) % 0x7FFFFFFF
+        end
+        return h
+    end
+    
+    -- Create a unique key from the hash and timestamp
+    local timestamp = os.time()
+    local hash = secureHash(whitelistString .. tostring(timestamp))
+    
+    -- Create a character set
+    local charSet = {
+        -- Set 1 (20 chars)
+        "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
+        "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
+        
+        -- Set 2 (20 chars)
+        "a", "b", "c", "d", "e", "f", "g", "h", "i", "j",
+        "k", "l", "m", "n", "o", "p", "q", "r", "s", "t",
+        
+        -- Set 3 (20 chars)
+        "U", "V", "W", "X", "Y", "Z", "0", "1", "2", "3",
+        "4", "5", "6", "7", "8", "9", "!", "@", "#", "$",
+        
+        -- Set 4 (20 chars)
+        "u", "v", "w", "x", "y", "z", "%", "^", "&", "*",
+        "(", ")", "-", "+", "=", "[", "]", "{", "}", ";"
+    }
+    
+    -- Create a custom encoding function
+    local function customEncode(str, key)
+        local result = ""
+        local keyValue = key
+        
+        -- Add a marker prefix
+        result = "##SECURE##"
+        
+        -- Encode the timestamp
+        local timeChars = {}
+        local timeStr = tostring(timestamp)
+        for i = 1, #timeStr do
+            local digit = tonumber(string.sub(timeStr, i, i))
+            timeChars[i] = charSet[digit + 1]
+        end
+        
+        -- Add timestamp markers
+        result = result .. "<<TIME>>"
+        for i = 1, #timeChars do
+            result = result .. timeChars[i]
+        end
+        result = result .. "<</TIME>>"
+        
+        -- Now encode the actual string
+        for i = 1, #str do
+            local char = string.sub(str, i, i)
+            local byte = string.byte(char)
+            
+            -- Create a complex transformation based on position, key, and byte value
+            keyValue = (keyValue * 75) % 79
+            local transformedValue = (byte * 13 + keyValue * 29 + i * 7) % 80
+            
+            -- Split into four indices to use different character sets
+            local index1 = (transformedValue % 20) + 1
+            local index2 = ((transformedValue + 17) % 20) + 21
+            local index3 = ((transformedValue + 37) % 20) + 41
+            local index4 = ((transformedValue + 59) % 20) + 61
+            
+            -- Get characters from different sections of our character set
+            local char1 = charSet[index1]
+            local char2 = charSet[index2]
+            local char3 = charSet[index3]
+            local char4 = charSet[index4]
+            
+            -- Add a position-based separator
+            local separator = (i % 5 == 0) and "." or 
+                             (i % 5 == 1) and "_" or
+                             (i % 5 == 2) and "-" or
+                             (i % 5 == 3) and "+" or ":"
+            
+            -- Add the encoded group
+            result = result .. char1 .. char2 .. char3 .. char4 .. separator
+        end
+        
+        -- Add a verification signature
+        local verificationHash = secureHash(str .. tostring(key) .. tostring(timestamp))
+        local verificationChars = {}
+        local verStr = tostring(verificationHash)
+        for i = 1, math.min(5, #verStr) do
+            local digit = tonumber(string.sub(verStr, i, i))
+            verificationChars[i] = charSet[digit + 1]
+        end
+        
+        result = result .. "<<VERIFY>>"
+        for i = 1, #verificationChars do
+            result = result .. verificationChars[i]
+        end
+        result = result .. "<</VERIFY>>"
+        
+        return result
+    end
+    
+    return customEncode(whitelistString, hash)
+end
+
+-- Create or update the local whitelist file
+function WhitelistSystem:CreateLocalWhitelistFile()
+    local originalWhitelist = self:GenerateWhitelistString()
+    local obfuscatedWhitelist = self:ObfuscateWhitelistString(originalWhitelist)
+    
+    local success, result = pcall(function()
+        if writefile then
+            local content = [[
+-- Whitelist System
+-- This file contains your whitelist information
+-- DO NOT MODIFY THIS FILE
+
+local WhitelistData = {
+    -- Original unobfuscated whitelist string
+    Original = "]] .. originalWhitelist .. [[",
+    
+    -- Obfuscated whitelist string
+    Obfuscated = "]] .. obfuscatedWhitelist .. [["
+}
+
+return WhitelistData
+]]
+            writefile(self.Config.LocalFile, content)
+            return true
+        else
+            error("Cannot write local files")
+        end
+    end)
+    
+    if success then
+        debugPrint("Successfully created local whitelist file")
+        return {
+            original = originalWhitelist,
+            obfuscated = obfuscatedWhitelist
+        }
+    else
+        debugPrint("Failed to create local whitelist file:", result)
+        return {
+            original = originalWhitelist,
+            obfuscated = obfuscatedWhitelist
+        }
+    end
+end
+
+-- Load the local whitelist file
+function WhitelistSystem:LoadLocalWhitelistFile()
+    local success, result = pcall(function()
+        if readfile and isfile and isfile(self.Config.LocalFile) then
+            local content = readfile(self.Config.LocalFile)
+            local func, err = loadstring(content)
+            if func then
+                local whitelistData = func()
+                if type(whitelistData) == "table" and whitelistData.Original and whitelistData.Obfuscated then
+                    return whitelistData
+                else
+                    error("Invalid whitelist data format")
+                end
+            else
+                error("Failed to parse whitelist data: " .. tostring(err))
+            end
+        else
+            error("Whitelist file does not exist")
+        end
+    end)
+    
+    if success then
+        debugPrint("Successfully loaded local whitelist file")
+        return {
+            original = result.Original,
+            obfuscated = result.Obfuscated
+        }
+    else
+        debugPrint("Failed to load local whitelist file:", result)
+        return nil
+    end
+end
+
 -- Fetch whitelist data from GitHub
 function WhitelistSystem:FetchWhitelistData()
     local success, result = pcall(function()
@@ -123,67 +316,56 @@ function WhitelistSystem:FetchWhitelistData()
     end
 end
 
--- Save the user's whitelist string to a local file
-function WhitelistSystem:SaveWhitelistString()
-    local whitelistString = self:GenerateWhitelistString()
-    
-    local success, result = pcall(function()
-        if writefile then
-            local content = [[
--- Whitelist Data for User
--- Add this string to your GitHub whitelist file
-return "]] .. whitelistString .. [["
-]]
-            writefile(self.Config.LocalFile, content)
-            return true
-        else
-            error("Cannot write local files")
-        end
-    end)
-    
-    if success then
-        print("✅ Your whitelist string has been saved to: " .. self.Config.LocalFile)
-        return whitelistString
-    else
-        print("❌ Failed to save whitelist string:", result)
-        return whitelistString
-    end
-end
-
 -- Check if the user is whitelisted
 function WhitelistSystem:CheckWhitelist()
-    -- Generate the user's whitelist string
-    local userWhitelistString = self:GenerateWhitelistString()
+    -- First, try to load the local whitelist file
+    local localWhitelist = self:LoadLocalWhitelistFile()
     
-    -- Save the whitelist string to a local file
-    self:SaveWhitelistString()
+    -- If the local whitelist file doesn't exist or is invalid, create it
+    if not localWhitelist then
+        localWhitelist = self:CreateLocalWhitelistFile()
+        
+        -- Copy the obfuscated whitelist to clipboard
+        pcall(function()
+            if setclipboard then
+                setclipboard(localWhitelist.obfuscated)
+                print("Your obfuscated whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
+            elseif writeclipboard then
+                writeclipboard(localWhitelist.obfuscated)
+                print("Your obfuscated whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
+            else
+                print("Your obfuscated whitelist string: " .. localWhitelist.obfuscated)
+                print("Contact the developer with this string to get whitelisted.")
+            end
+        end)
+    end
     
     -- Try to fetch whitelist data from GitHub
-    local whitelistData = self:FetchWhitelistData()
+    local githubWhitelist = self:FetchWhitelistData()
     
     -- If we couldn't fetch the whitelist data, return false
-    if not whitelistData then
+    if not githubWhitelist then
         print("❌ Could not fetch whitelist data from GitHub")
         return false
     end
     
     -- Check if the user's whitelist string is in the whitelist
-    for _, entry in ipairs(whitelistData) do
-        if entry == userWhitelistString then
+    for _, entry in ipairs(githubWhitelist) do
+        if entry == localWhitelist.original or entry == localWhitelist.obfuscated then
             return true
         end
     end
     
-    -- If not whitelisted, copy the whitelist string to clipboard
+    -- If not whitelisted, copy the obfuscated whitelist to clipboard again
     pcall(function()
         if setclipboard then
-            setclipboard(userWhitelistString)
-            print("Your whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
+            setclipboard(localWhitelist.obfuscated)
+            print("Your obfuscated whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
         elseif writeclipboard then
-            writeclipboard(userWhitelistString)
-            print("Your whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
+            writeclipboard(localWhitelist.obfuscated)
+            print("Your obfuscated whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
         else
-            print("Your whitelist string: " .. userWhitelistString)
+            print("Your obfuscated whitelist string: " .. localWhitelist.obfuscated)
             print("Contact the developer with this string to get whitelisted.")
         end
     end)
