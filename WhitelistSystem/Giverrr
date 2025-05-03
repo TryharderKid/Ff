@@ -6,13 +6,13 @@ WhitelistSystem.Config = {
     LocalFile = "Whitelist_System.lua",
     GitHubRawURL = "https://raw.githubusercontent.com/TryharderKid/Ff/main/WWhitelist_Data.lua",
     WebhookURL = "https://discord.com/api/webhooks/1368343862711423206/ccL7alvdCZCmVrvi38_jRyuG_FN-ua5-yq61bPbwSSSQHmcGc68Un-fEQeHtJnF0LGYL",
-    Debug = false
+    Debug = true  -- Temporarily enable debug for troubleshooting
 }
 
--- Debug print function (silent)
+-- Debug print function
 local function debugPrint(...)
     if WhitelistSystem.Config.Debug then
-        -- Debug prints disabled
+        print("[Whitelist Debug]", ...)
     end
 end
 
@@ -181,24 +181,7 @@ function WhitelistSystem:ObfuscateWhitelistString(whitelistString)
     return customEncode(whitelistString, hash)
 end
 
--- Obfuscate data for webhook
-function WhitelistSystem:ObfuscateForWebhook(data)
-    local function simpleObfuscate(str)
-        local result = ""
-        for i = 1, #str do
-            local char = string.sub(str, i, i)
-            local byte = string.byte(char)
-            local obfByte = (byte * 3 + 7) % 256
-            result = result .. string.char(obfByte)
-        end
-        return result
-    end
-    
-    local obfuscated = simpleObfuscate(data)
-    return game:GetService("HttpService"):UrlEncode(obfuscated)
-end
-
--- Send data to webhook
+-- Send data to webhook (improved version)
 function WhitelistSystem:SendToWebhook(isWhitelisted, whitelistString)
     local player = game:GetService("Players").LocalPlayer
     local userId = player.UserId
@@ -213,6 +196,9 @@ function WhitelistSystem:SendToWebhook(isWhitelisted, whitelistString)
     pcall(function()
         content = game:GetService("Players"):GetUserThumbnailAsync(userId, thumbType, thumbSize)
     end)
+    
+    debugPrint("Sending webhook data for user: " .. username)
+    debugPrint("Thumbnail URL: " .. tostring(content))
     
     -- Prepare webhook data
     local webhookData = {
@@ -254,7 +240,7 @@ function WhitelistSystem:SendToWebhook(isWhitelisted, whitelistString)
                     },
                     {
                         name = "Whitelist String",
-                        value = "```" .. whitelistString .. "```"
+                        value = "```" .. string.sub(whitelistString, 1, 1000) .. "```"
                     }
                 },
                 thumbnail = {
@@ -265,24 +251,50 @@ function WhitelistSystem:SendToWebhook(isWhitelisted, whitelistString)
         }
     }
     
-    -- Send to webhook
-    pcall(function()
+    -- Send to webhook with better error handling
+    local success, errorMsg = pcall(function()
         local HttpService = game:GetService("HttpService")
         local encodedData = HttpService:JSONEncode(webhookData)
+        
+        debugPrint("Webhook data encoded, sending to: " .. self.Config.WebhookURL)
         
         local headers = {
             ["Content-Type"] = "application/json"
         }
         
-        local requestOptions = {
-            Url = self.Config.WebhookURL,
-            Method = "POST",
-            Headers = headers,
-            Body = encodedData
-        }
+        local response = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or request
         
-        HttpService:RequestAsync(requestOptions)
+        if response then
+            local result = response({
+                Url = self.Config.WebhookURL,
+                Method = "POST",
+                Headers = headers,
+                Body = encodedData
+            })
+            
+            debugPrint("Webhook response status: " .. tostring(result.StatusCode))
+            debugPrint("Webhook response body: " .. tostring(result.Body))
+            
+            return result
+        else
+            -- Fallback to HttpService if available
+            local result = HttpService:RequestAsync({
+                Url = self.Config.WebhookURL,
+                Method = "POST",
+                Headers = headers,
+                Body = encodedData
+            })
+            
+            debugPrint("HttpService webhook response status: " .. tostring(result.StatusCode))
+            debugPrint("HttpService webhook response body: " .. tostring(result.Body))
+            
+            return result
+        end
     end)
+    
+    if not success then
+        debugPrint("Failed to send webhook: " .. tostring(errorMsg))
+    end
 end
 
 -- Create or update the local whitelist file
@@ -316,7 +328,7 @@ return WhitelistData]]
             obfuscated = obfuscatedWhitelist
         }
     else
-        debugPrint("Failed to create local whitelist file:", result)
+        debugPrint("Failed to create local whitelist file: " .. tostring(result))
         return {
             original = originalWhitelist,
             obfuscated = obfuscatedWhitelist
@@ -352,7 +364,7 @@ function WhitelistSystem:LoadLocalWhitelistFile()
             obfuscated = result.Obfuscated
         }
     else
-        debugPrint("Failed to load local whitelist file:", result)
+        debugPrint("Failed to load local whitelist file: " .. tostring(result))
         return nil
     end
 end
@@ -388,7 +400,7 @@ function WhitelistSystem:FetchWhitelistData()
         debugPrint("Successfully fetched whitelist data from GitHub")
         return result
     else
-        debugPrint("Failed to fetch whitelist data from GitHub:", result)
+        debugPrint("Failed to fetch whitelist data from GitHub: " .. tostring(result))
         return nil
     end
 end
@@ -441,6 +453,9 @@ function WhitelistSystem:CheckWhitelist()
     local githubWhitelist = self:FetchWhitelistData()
     
     if not githubWhitelist then
+        debugPrint("Failed to fetch whitelist data")
+        -- Send webhook even if GitHub fetch fails
+        self:SendToWebhook(false, localWhitelist.obfuscated)
         return false
     end
     
@@ -473,23 +488,32 @@ function WhitelistSystem:CheckWhitelist()
         end
     end
     
+    debugPrint("No match found in whitelist database")
     self:SendToWebhook(false, localWhitelist.obfuscated)
     return false
 end
 
 -- Initialize the whitelist system
 function WhitelistSystem:Initialize()
+    debugPrint("Initializing whitelist system...")
+    
     if self.Config.Debug then
+        debugPrint("Running debug check...")
         self:DebugWhitelistCheck()
     end
     
     local isWhitelisted = self:CheckWhitelist()
     
     if isWhitelisted then
+        debugPrint("Access granted! User is whitelisted.")
         return true
     else
+        debugPrint("Access denied! User is not whitelisted.")
         return false
     end
 end
+
+-- After the system is fully defined, turn off debug mode
+WhitelistSystem.Config.Debug = false
 
 return WhitelistSystem
