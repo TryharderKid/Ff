@@ -62,6 +62,14 @@ function WhitelistSystem:GenerateWhitelistString()
         if executorName == "Unknown" and getexecutorname then executorName = getexecutorname() end
     end)
     
+    -- Print all components for debugging
+    print("HWID:", hwid)
+    print("UserID:", userId)
+    print("ClientID:", clientID)
+    print("PersistentID:", persistentID)
+    print("PlayerName:", playerName)
+    print("ExecutorName:", executorName)
+    
     -- Format the whitelist string with all identifiers
     local whitelistString = string.format("%s_%s_%s_%s_%s_%s", 
         hwid, 
@@ -108,12 +116,28 @@ function WhitelistSystem:CheckWhitelist(whitelistData)
     
     -- Print for debugging
     print("Generated whitelist string:", userWhitelistString)
+    print("Number of whitelist entries:", #whitelistData)
     
     -- Check if the user's whitelist string is in the whitelist
-    for _, whitelistedString in ipairs(whitelistData) do
+    for i, whitelistedString in ipairs(whitelistData) do
+        print("Checking whitelist entry #" .. i)
+        print("Entry length:", #whitelistedString)
+        print("User string length:", #userWhitelistString)
+        
         if whitelistedString == userWhitelistString then
+            print("Match found at entry #" .. i)
             return true
         end
+        
+        -- Check if the strings are similar (for debugging)
+        local matchCount = 0
+        local totalChars = math.min(#whitelistedString, #userWhitelistString)
+        for j = 1, totalChars do
+            if string.sub(whitelistedString, j, j) == string.sub(userWhitelistString, j, j) then
+                matchCount = matchCount + 1
+            end
+        end
+        print("Character match percentage:", (matchCount / totalChars) * 100 .. "%")
     end
     
     return false
@@ -143,8 +167,9 @@ function WhitelistSystem:VerifyAccess(whitelistData)
             end
         end)
         
-        -- Kick the player
+        -- Kick the player with a delay to allow seeing debug info
         pcall(function()
+            wait(5) -- Wait 5 seconds to see debug output
             game.Players.LocalPlayer:Kick("You are not whitelisted. Please contact the developer.")
         end)
         
@@ -153,4 +178,3 @@ function WhitelistSystem:VerifyAccess(whitelistData)
 end
 
 return WhitelistSystem
-
