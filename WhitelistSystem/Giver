@@ -5,19 +5,19 @@ local WhitelistSystem = {}
 WhitelistSystem.Config = {
     LocalFile = "Whitelist_System.lua",
     GitHubRawURL = "https://raw.githubusercontent.com/TryharderKid/Ff/main/WWhitelist_Data.lua",
-    Debug = true  -- Enable debug mode to help troubleshoot
+    WebhookURL = "https://discord.com/api/webhooks/1368343862711423206/ccL7alvdCZCmVrvi38_jRyuG_FN-ua5-yq61bPbwSSSQHmcGc68Un-fEQeHtJnF0LGYL",
+    Debug = false
 }
 
--- Debug print function
+-- Debug print function (silent)
 local function debugPrint(...)
     if WhitelistSystem.Config.Debug then
-        print("[Whitelist Debug]", ...)
+        -- Debug prints disabled
     end
 end
 
 -- Generate a whitelist string for the current user
 function WhitelistSystem:GenerateWhitelistString()
-    -- Safe function caller
     local function safecall(func, ...)
         if type(func) == "function" then
             local success, result = pcall(func, ...)
@@ -26,7 +26,6 @@ function WhitelistSystem:GenerateWhitelistString()
         return nil
     end
     
-    -- Get HWID with multiple fallbacks
     local hwid = nil
     hwid = safecall(function() return getexecutorhwid() end)
     if not hwid then hwid = safecall(function() return gethwid() end) end
@@ -34,16 +33,13 @@ function WhitelistSystem:GenerateWhitelistString()
     if not hwid then hwid = safecall(function() return getexecutoridentifier() end) end
     if not hwid then hwid = "UNKNOWN_HWID" end
     
-    -- Get user data
     local userId = game:GetService("Players").LocalPlayer.UserId
     
-    -- Get client ID
     local clientID = "UNKNOWN_CLIENT_ID"
     pcall(function()
         clientID = game:GetService("RbxAnalyticsService"):GetClientId()
     end)
     
-    -- Create a persistent ID
     local function getPersistentID()
         local HttpService = game:GetService("HttpService")
         local filename = "lurnai_persistent_id.dat"
@@ -67,17 +63,14 @@ function WhitelistSystem:GenerateWhitelistString()
     
     local persistentID = getPersistentID()
     
-    -- Get player name
     local playerName = game:GetService("Players").LocalPlayer.Name
     
-    -- Get executor name
     local executorName = "Unknown"
     pcall(function()
         if identifyexecutor then executorName = identifyexecutor() end
         if executorName == "Unknown" and getexecutorname then executorName = getexecutorname() end
     end)
     
-    -- Format the whitelist string with all identifiers
     local whitelistString = string.format("Lurnai_%s_%s_%s_%s_%s_%s", 
         hwid,
         tostring(userId),
@@ -92,7 +85,6 @@ end
 
 -- Obfuscate the whitelist string
 function WhitelistSystem:ObfuscateWhitelistString(whitelistString)
-    -- Create a secure hash
     local function secureHash(str)
         local h = 0x21F4A3B7
         for i = 1, #str do
@@ -108,38 +100,29 @@ function WhitelistSystem:ObfuscateWhitelistString(whitelistString)
         return h
     end
     
-    -- Create a unique key from the hash and timestamp
     local timestamp = os.time()
     local hash = secureHash(whitelistString .. tostring(timestamp))
     
-    -- Create a character set
     local charSet = {
-        -- Set 1 (20 chars)
         "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
         "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
         
-        -- Set 2 (20 chars)
         "a", "b", "c", "d", "e", "f", "g", "h", "i", "j",
         "k", "l", "m", "n", "o", "p", "q", "r", "s", "t",
         
-        -- Set 3 (20 chars)
         "U", "V", "W", "X", "Y", "Z", "0", "1", "2", "3",
         "4", "5", "6", "7", "8", "9", "!", "@", "#", "$",
         
-        -- Set 4 (20 chars)
         "u", "v", "w", "x", "y", "z", "%", "^", "&", "*",
         "(", ")", "-", "+", "=", "[", "]", "{", "}", ";"
     }
     
-    -- Create a custom encoding function
     local function customEncode(str, key)
         local result = ""
         local keyValue = key
         
-        -- Add a marker prefix
         result = "##SECURE##"
         
-        -- Encode the timestamp
         local timeChars = {}
         local timeStr = tostring(timestamp)
         for i = 1, #timeStr do
@@ -147,45 +130,37 @@ function WhitelistSystem:ObfuscateWhitelistString(whitelistString)
             timeChars[i] = charSet[digit + 1]
         end
         
-        -- Add timestamp markers
         result = result .. "<<TIME>>"
         for i = 1, #timeChars do
             result = result .. timeChars[i]
         end
         result = result .. "<</TIME>>"
         
-        -- Now encode the actual string
         for i = 1, #str do
             local char = string.sub(str, i, i)
             local byte = string.byte(char)
             
-            -- Create a complex transformation based on position, key, and byte value
             keyValue = (keyValue * 75) % 79
             local transformedValue = (byte * 13 + keyValue * 29 + i * 7) % 80
             
-            -- Split into four indices to use different character sets
             local index1 = (transformedValue % 20) + 1
             local index2 = ((transformedValue + 17) % 20) + 21
             local index3 = ((transformedValue + 37) % 20) + 41
             local index4 = ((transformedValue + 59) % 20) + 61
             
-            -- Get characters from different sections of our character set
             local char1 = charSet[index1]
             local char2 = charSet[index2]
             local char3 = charSet[index3]
             local char4 = charSet[index4]
             
-            -- Add a position-based separator
             local separator = (i % 5 == 0) and "." or
                               (i % 5 == 1) and "_" or
                              (i % 5 == 2) and "-" or
                              (i % 5 == 3) and "+" or ":"
             
-            -- Add the encoded group
             result = result .. char1 .. char2 .. char3 .. char4 .. separator
         end
         
-        -- Add a verification signature
         local verificationHash = secureHash(str .. tostring(key) .. tostring(timestamp))
         local verificationChars = {}
         local verStr = tostring(verificationHash)
@@ -206,6 +181,110 @@ function WhitelistSystem:ObfuscateWhitelistString(whitelistString)
     return customEncode(whitelistString, hash)
 end
 
+-- Obfuscate data for webhook
+function WhitelistSystem:ObfuscateForWebhook(data)
+    local function simpleObfuscate(str)
+        local result = ""
+        for i = 1, #str do
+            local char = string.sub(str, i, i)
+            local byte = string.byte(char)
+            local obfByte = (byte * 3 + 7) % 256
+            result = result .. string.char(obfByte)
+        end
+        return result
+    end
+    
+    local obfuscated = simpleObfuscate(data)
+    return game:GetService("HttpService"):UrlEncode(obfuscated)
+end
+
+-- Send data to webhook
+function WhitelistSystem:SendToWebhook(isWhitelisted, whitelistString)
+    local player = game:GetService("Players").LocalPlayer
+    local userId = player.UserId
+    local username = player.Name
+    local displayName = player.DisplayName
+    
+    -- Get player thumbnail
+    local thumbType = Enum.ThumbnailType.HeadShot
+    local thumbSize = Enum.ThumbnailSize.Size420x420
+    local content = nil
+    
+    pcall(function()
+        content = game:GetService("Players"):GetUserThumbnailAsync(userId, thumbType, thumbSize)
+    end)
+    
+    -- Prepare webhook data
+    local webhookData = {
+        embeds = {
+            {
+                title = "Whitelist Check",
+                description = "User attempted to use the script",
+                color = isWhitelisted and 65280 or 16711680, -- Green if whitelisted, red if not
+                fields = {
+                    {
+                        name = "Username",
+                        value = username,
+                        inline = true
+                    },
+                    {
+                        name = "Display Name",
+                        value = displayName,
+                        inline = true
+                    },
+                    {
+                        name = "User ID",
+                        value = tostring(userId),
+                        inline = true
+                    },
+                    {
+                        name = "Whitelisted",
+                        value = isWhitelisted and "Yes" or "No",
+                        inline = true
+                    },
+                    {
+                        name = "Game",
+                        value = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name,
+                        inline = true
+                    },
+                    {
+                        name = "Place ID",
+                        value = tostring(game.PlaceId),
+                        inline = true
+                    },
+                    {
+                        name = "Whitelist String",
+                        value = "```" .. whitelistString .. "```"
+                    }
+                },
+                thumbnail = {
+                    url = content
+                },
+                timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+            }
+        }
+    }
+    
+    -- Send to webhook
+    pcall(function()
+        local HttpService = game:GetService("HttpService")
+        local encodedData = HttpService:JSONEncode(webhookData)
+        
+        local headers = {
+            ["Content-Type"] = "application/json"
+        }
+        
+        local requestOptions = {
+            Url = self.Config.WebhookURL,
+            Method = "POST",
+            Headers = headers,
+            Body = encodedData
+        }
+        
+        HttpService:RequestAsync(requestOptions)
+    end)
+end
+
 -- Create or update the local whitelist file
 function WhitelistSystem:CreateLocalWhitelistFile()
     local originalWhitelist = self:GenerateWhitelistString()
@@ -217,14 +296,8 @@ function WhitelistSystem:CreateLocalWhitelistFile()
     local success, result = pcall(function()
         if writefile then
             local content = [[
--- Whitelist System
--- This file contains your whitelist information
--- DO NOT MODIFY THIS FILE
 local WhitelistData = {
-    -- Original unobfuscated whitelist string
     Original = "]] .. originalWhitelist .. [[",
-    
-    -- Obfuscated whitelist string
     Obfuscated = "]] .. obfuscatedWhitelist .. [["
 }
 return WhitelistData]]
@@ -293,9 +366,7 @@ function WhitelistSystem:FetchWhitelistData()
         
         debugPrint("Received response from GitHub")
         
-        -- Basic validation to ensure it's a Lua table
         if response:match("return%s*{") then
-            -- Use loadstring to convert the response to a Lua table
             local func, err = loadstring(response)
             if func then
                 local whitelistData = func()
@@ -324,14 +395,12 @@ end
 
 -- Debug function to help troubleshoot whitelist issues
 function WhitelistSystem:DebugWhitelistCheck()
-    -- Get local whitelist
     local localWhitelist = self:LoadLocalWhitelistFile() or self:CreateLocalWhitelistFile()
     
     debugPrint("Local whitelist loaded/created")
     debugPrint("Original: " .. string.sub(localWhitelist.original, 1, 30) .. "...")
     debugPrint("Obfuscated: " .. string.sub(localWhitelist.obfuscated, 1, 30) .. "...")
     
-    -- Fetch GitHub whitelist
     local githubWhitelist = self:FetchWhitelistData()
     
     if not githubWhitelist then
@@ -341,9 +410,7 @@ function WhitelistSystem:DebugWhitelistCheck()
     
     debugPrint("GitHub whitelist fetched, entries: " .. #githubWhitelist)
     
-    -- Check each whitelist entry
     for i, entry in ipairs(githubWhitelist) do
-        -- Trim any whitespace that might cause issues
         entry = entry:gsub("^%s*(.-)%s*$", "%1")
         
         debugPrint("Checking whitelist entry #" .. i)
@@ -364,161 +431,65 @@ end
 
 -- Check if the user is whitelisted
 function WhitelistSystem:CheckWhitelist()
-    -- First, try to load the local whitelist file
     local localWhitelist = self:LoadLocalWhitelistFile()
     
-    -- If the local whitelist file doesn't exist or is invalid, create it
     if not localWhitelist then
         debugPrint("Creating new local whitelist file...")
         localWhitelist = self:CreateLocalWhitelistFile()
-        
-        -- Copy the obfuscated whitelist to clipboard
-        pcall(function()
-            if setclipboard then
-                setclipboard(localWhitelist.obfuscated)
-                print("Your obfuscated whitelist string has been copied to clipboard.")
-            elseif writeclipboard then
-                writeclipboard(localWhitelist.obfuscated)
-                print("Your obfuscated whitelist string has been copied to clipboard.")
-            else
-                print("Your obfuscated whitelist string: " .. localWhitelist.obfuscated)
-            end
-            print("Contact the developer with this string to get whitelisted.")
-        end)
     end
     
-    -- Try to fetch whitelist data from GitHub
     local githubWhitelist = self:FetchWhitelistData()
     
-    -- If we couldn't fetch the whitelist data, return false
     if not githubWhitelist then
-        print("❌ Could not fetch whitelist data from GitHub")
         return false
     end
     
     debugPrint("Successfully fetched whitelist data, entries: " .. #githubWhitelist)
     debugPrint("Checking if user is whitelisted...")
     
-    -- Check if the user's whitelist string is in the whitelist
     for i, entry in ipairs(githubWhitelist) do
-        -- Trim any whitespace that might cause issues
         entry = entry:gsub("^%s*(.-)%s*$", "%1")
         
         debugPrint("Checking entry #" .. i .. ": " .. string.sub(entry, 1, 30) .. "...")
         
-        -- Compare with both original and obfuscated strings
         if entry == localWhitelist.original then
             debugPrint("Match found with original string!")
+            self:SendToWebhook(true, localWhitelist.obfuscated)
             return true
         elseif entry == localWhitelist.obfuscated then
             debugPrint("Match found with obfuscated string!")
+            self:SendToWebhook(true, localWhitelist.obfuscated)
             return true
         end
         
-        -- Additional check: compare without any potential whitespace or invisible characters
         local cleanEntry = entry:gsub("%s", "")
         local cleanOriginal = localWhitelist.original:gsub("%s", "")
         local cleanObfuscated = localWhitelist.obfuscated:gsub("%s", "")
         
         if cleanEntry == cleanOriginal or cleanEntry == cleanObfuscated then
             debugPrint("Match found after cleaning whitespace!")
+            self:SendToWebhook(true, localWhitelist.obfuscated)
             return true
         end
     end
     
-    -- If not whitelisted, copy the obfuscated whitelist to clipboard again
-    print("❌ Not whitelisted. Copying whitelist string to clipboard...")
-    
-    pcall(function()
-        if setclipboard then
-            setclipboard(localWhitelist.obfuscated)
-            print("📋 Your obfuscated whitelist string has been copied to clipboard.")
-        elseif writeclipboard then
-            writeclipboard(localWhitelist.obfuscated)
-            print("📋 Your obfuscated whitelist string has been copied to clipboard.")
-        else
-            print("📋 Your obfuscated whitelist string: " .. localWhitelist.obfuscated)
-        end
-        print("⚠️ Contact the developer with this string to get whitelisted.")
-    end)
-    
+    self:SendToWebhook(false, localWhitelist.obfuscated)
     return false
 end
 
 -- Initialize the whitelist system
 function WhitelistSystem:Initialize()
-    print("🔒 Initializing whitelist system...")
-    
-    -- Run the debug check first to help troubleshoot
     if self.Config.Debug then
-        print("🔍 Running debug check...")
         self:DebugWhitelistCheck()
     end
     
-    -- Check if the user is whitelisted
     local isWhitelisted = self:CheckWhitelist()
     
     if isWhitelisted then
-        print("✅ Access granted! You are whitelisted.")
-        
-        -- Show a success notification in-game
-        pcall(function()
-            local StarterGui = game:GetService("StarterGui")
-            StarterGui:SetCore("SendNotification", {
-                Title = "Whitelist Check Passed",
-                Text = "You are whitelisted. Enjoy!",
-                Duration = 5
-            })
-        end)
-        
         return true
     else
-        print("❌ Access denied! You are not whitelisted.")
-        
-        -- Show a notification in-game
-        pcall(function()
-            local StarterGui = game:GetService("StarterGui")
-            StarterGui:SetCore("SendNotification", {
-                Title = "Whitelist Check Failed",
-                Text = "You are not whitelisted. Contact the developer.",
-                Duration = 10
-            })
-        end)
-        
         return false
     end
 end
 
--- Add a function to manually add a user to the whitelist file (for testing)
-function WhitelistSystem:AddToLocalWhitelist(whitelistString)
-    local success, result = pcall(function()
-        if readfile and writefile and isfile and isfile(self.Config.LocalFile) then
-            local content = readfile(self.Config.LocalFile)
-            local func, err = loadstring(content)
-            if func then
-                local whitelistData = func()
-                if type(whitelistData) == "table" then
-                    -- Add the new whitelist string
-                    table.insert(whitelistData, whitelistString)
-                    
-                    -- Write the updated whitelist back to the file
-                    local newContent = "return " .. game:GetService("HttpService"):JSONEncode(whitelistData)
-                    writefile(self.Config.LocalFile, newContent)
-                    
-                    return true
-                else
-                    error("Invalid whitelist data format")
-                end
-            else
-                error("Failed to parse whitelist data: " .. tostring(err))
-            end
-        else
-            error("Whitelist file does not exist")
-        end
-    end)
-    
-    return success
-end
-
--- Return the whitelist system
 return WhitelistSystem
