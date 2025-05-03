@@ -1,1 +1,183 @@
+local WhitelistSystem = {}
 
+-- Function to generate the whitelist string with character insertion
+function WhitelistSystem:GenerateWhitelistString()
+    -- Safe function caller
+    local function safecall(func, ...)
+        if type(func) == "function" then
+            local success, result = pcall(func, ...)
+            if success then return result end
+        end
+        return nil
+    end
+    
+    -- Get HWID with multiple fallbacks
+    local hwid = nil
+    hwid = safecall(function() return getexecutorhwid() end)
+    if not hwid then hwid = safecall(function() return gethwid() end) end
+    if not hwid then hwid = safecall(function() return get_hwid() end) end
+    if not hwid then hwid = safecall(function() return getexecutoridentifier() end) end
+    if not hwid then hwid = "UNKNOWN_HWID" end
+    
+    -- Simple SHA256 hashing function (for HWID obfuscation)
+    local function sha256(str)
+        -- This is a simplified version for demonstration
+        local result = ""
+        for i = 1, #str do
+            local byte = string.byte(str, i)
+            result = result .. string.format("%02x", byte)
+        end
+        -- Pad to make it look like a real SHA256 hash
+        while #result < 64 do
+            result = result .. "0"
+        end
+        return result:sub(1, 64)
+    end
+    
+    -- Get user data
+    local userId = game:GetService("Players").LocalPlayer.UserId
+    
+    -- Create a persistent ID
+    local function getPersistentID()
+        local HttpService = game:GetService("HttpService")
+        local filename = "persistent_id.dat"
+        
+        local existingID = nil
+        pcall(function()
+            if readfile then existingID = readfile(filename) end
+        end)
+        
+        if existingID and #existingID > 10 then
+            return existingID
+        end
+        
+        local newID = HttpService:GenerateGUID(false)
+        pcall(function()
+            if writefile then writefile(filename, newID) end
+        end)
+        
+        return newID
+    end
+    
+    local persistentID = getPersistentID()
+    local placeID = game.PlaceId
+    local clientID = game:GetService("RbxAnalyticsService"):GetClientId()
+    
+    -- Determine platform
+    local UserInputService = game:GetService("UserInputService")
+    local isPc = UserInputService.KeyboardEnabled and 500 or 0
+    local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled and 1000 or 0
+    
+    -- Get player name
+    local playerName = game:GetService("Players").LocalPlayer.Name
+    
+    -- Get executor name
+    local executorName = "Unknown"
+    pcall(function()
+        if identifyexecutor then executorName = identifyexecutor() end
+        if executorName == "Unknown" and getexecutorname then executorName = getexecutorname() end
+    end)
+    
+    -- Simple obfuscation: hash the HWID
+    local obfuscatedHWID = sha256(hwid)
+    
+    -- Format the whitelist string
+    local whitelistString = string.format(
+        "%s_%s_%s_%s_%s_%s_%s_%s_%s",
+        obfuscatedHWID,
+        tostring(userId),
+        tostring(persistentID),
+        tostring(placeID),
+        tostring(clientID),
+        tostring(isPc),
+        tostring(isMobile),
+        playerName,
+        executorName
+    )
+    
+    -- Character insertion obfuscation
+    local function obfuscateWithInsertedChars(str)
+        local result = ""
+        local letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        local numbers = "0123456789"
+        
+        for i = 1, #str do
+            local char = string.sub(str, i, i)
+            result = result .. char
+            
+            -- Don't add a random character after the last character
+            if i < #str then
+                local randomChar
+                
+                -- If the current character is a number, insert a random number
+                if string.match(char, "%d") then
+                    local randomIndex = math.random(1, #numbers)
+                    randomChar = string.sub(numbers, randomIndex, randomIndex)
+                else
+                    -- Otherwise insert a random letter
+                    local randomIndex = math.random(1, #letters)
+                    randomChar = string.sub(letters, randomIndex, randomIndex)
+                end
+                
+                result = result .. "_" .. randomChar .. "_"
+            end
+        end
+        
+        return result
+    end
+    
+    -- Apply the obfuscation to the entire string
+    local obfuscatedString = obfuscateWithInsertedChars(whitelistString)
+    
+    return obfuscatedString
+end
+
+-- Function to check if the user is whitelisted
+function WhitelistSystem:CheckWhitelist(whitelistData)
+    -- Generate the user's whitelist string
+    local userWhitelistString = self:GenerateWhitelistString()
+    
+    -- Check if the user's whitelist string is in the whitelist
+    for _, whitelistedString in ipairs(whitelistData) do
+        if whitelistedString == userWhitelistString then
+            return true
+        end
+    end
+    
+    return false
+end
+
+-- Function to handle whitelist verification
+function WhitelistSystem:VerifyAccess(whitelistData)
+    local isWhitelisted = self:CheckWhitelist(whitelistData)
+    
+    if isWhitelisted then
+        print("Access granted! You are whitelisted.")
+        return true
+    else
+        print("Access denied! You are not whitelisted.")
+        -- Copy the user's whitelist string to clipboard for easy whitelisting
+        pcall(function()
+            local userString = self:GenerateWhitelistString()
+            if setclipboard then
+                setclipboard(userString)
+                print("Your whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
+            elseif writeclipboard then
+                writeclipboard(userString)
+                print("Your whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
+            else
+                print("Your whitelist string: " .. userString)
+                print("Contact the developer with this string to get whitelisted.")
+            end
+        end)
+        
+        -- Kick the player
+        pcall(function()
+            game.Players.LocalPlayer:Kick("You are not whitelisted. Please contact the developer.")
+        end)
+        
+        return false
+    end
+end
+
+return WhitelistSystem
