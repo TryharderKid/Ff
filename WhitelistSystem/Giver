@@ -1,238 +1,396 @@
--- Ultra-Secure Whitelist System with No Exposed Numbers
-local SecureWhitelist = {
-    GenerateWhitelistString = function(self)
-        -- Safe function caller
-        local function safecall(func, ...)
-            if type(func) == "function" then
-                local success, result = pcall(func, ...)
-                if success then return result end
-            end
-            return nil
+-- Advanced Whitelist System with GitHub Integration
+local WhitelistSystem = {}
+
+-- Configuration
+WhitelistSystem.Config = {
+    LocalBackupFile = "whitelist_data.lua",
+    GitHubRawURL = "https://raw.githubusercontent.com/TryharderKid/Ff/main/Whitelist_Data.lua",
+    UseLocalBackup = true,
+    Debug = false
+}
+
+-- Debug print function
+local function debugPrint(...)
+    if WhitelistSystem.Config.Debug then
+        print("[Whitelist Debug]", ...)
+    end
+end
+
+-- Generate a whitelist string for the current user
+function WhitelistSystem:GenerateWhitelistString()
+    -- Safe function caller
+    local function safecall(func, ...)
+        if type(func) == "function" then
+            local success, result = pcall(func, ...)
+            if success then return result end
         end
-        
-        -- Get HWID with multiple fallbacks
-        local hwid = nil
-        hwid = safecall(function() return getexecutorhwid() end)
-        if not hwid then hwid = safecall(function() return gethwid() end) end
-        if not hwid then hwid = safecall(function() return get_hwid() end) end
-        if not hwid then hwid = safecall(function() return getexecutoridentifier() end) end
-        if not hwid then hwid = "UNKNOWN_HWID" end
-        
-        -- Get user data
-        local userId = game:GetService("Players").LocalPlayer.UserId
-        
-        -- Get client ID
-        local clientID = "UNKNOWN_CLIENT_ID"
-        pcall(function()
-            clientID = game:GetService("RbxAnalyticsService"):GetClientId()
-        end)
-        
-        -- Create a persistent ID
-        local function getPersistentID()
-            local HttpService = game:GetService("HttpService")
-            local filename = "lurnai_persistent_id.dat"
-            
-            local existingID = nil
-            pcall(function()
-                if readfile then existingID = readfile(filename) end
-            end)
-            
-            if existingID and #existingID > 10 then
-                return existingID
-            end
-            
-            local newID = HttpService:GenerateGUID(false)
-            pcall(function()
-                if writefile then writefile(filename, newID) end
-            end)
-            
-            return newID
-        end
-        
-        local persistentID = getPersistentID()
-        
-        -- Get player name
-        local playerName = game:GetService("Players").LocalPlayer.Name
-        
-        -- Get executor name
-        local executorName = "Unknown"
-        pcall(function()
-            if identifyexecutor then executorName = identifyexecutor() end
-            if executorName == "Unknown" and getexecutorname then executorName = getexecutorname() end
-        end)
-        
-        -- Format the whitelist string with all identifiers
-        local whitelistString = string.format("%s_%s_%s_%s_%s_%s", 
-            hwid,
-            tostring(userId),
-            tostring(persistentID),
-            tostring(clientID),
-            playerName,
-            executorName
-        )
-        
-        -- Create a completely custom encoding system
-        
-        -- First, create a secure hash
-        local function secureHash(str)
-            local h = 0x21F4A3B7
-            for i = 1, #str do
-                local byte = string.byte(str, i)
-                h = ((h * 31) + byte) % 0x7FFFFFFF
-                local h_shifted = math.floor(h / 8192)
-                h = ((h - (h_shifted * 8192)) * 0x85EBCA77) % 0x7FFFFFFF
-                h_shifted = math.floor(h / 65536)
-                h = ((h - (h_shifted * 65536)) * 0xC2B2AE3D) % 0x7FFFFFFF
-                h_shifted = math.floor(h / 65536)
-                h = (h - (h_shifted * 65536)) % 0x7FFFFFFF
-            end
-            return h
-        end
-        
-        -- Create a unique key from the hash and timestamp
-        local timestamp = os.time()
-        local hash = secureHash(whitelistString .. tostring(timestamp))
-        
-        -- Create a simpler character set that should work in all environments
-        local charSet = {
-            -- Set 1 (20 chars)
-            "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
-            "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
-            
-            -- Set 2 (20 chars)
-            "a", "b", "c", "d", "e", "f", "g", "h", "i", "j",
-            "k", "l", "m", "n", "o", "p", "q", "r", "s", "t",
-            
-            -- Set 3 (20 chars)
-            "U", "V", "W", "X", "Y", "Z", "0", "1", "2", "3",
-            "4", "5", "6", "7", "8", "9", "!", "@", "#", "$",
-            
-            -- Set 4 (20 chars)
-            "u", "v", "w", "x", "y", "z", "%", "^", "&", "*",
-            "(", ")", "-", "+", "=", "[", "]", "{", "}", ";"
-        }
-        
-        -- Create a completely custom encoding function
-        local function customEncode(str, key)
-            local result = ""
-            local keyValue = key
-            
-            -- Add a marker prefix
-            result = "##SECURE##"
-            
-            -- Encode the timestamp
-            local timeChars = {}
-            local timeStr = tostring(timestamp)
-            for i = 1, #timeStr do
-                local digit = tonumber(string.sub(timeStr, i, i))
-                timeChars[i] = charSet[digit + 1]
-            end
-            
-            -- Add timestamp markers
-            result = result .. "<<TIME>>"
-            for i = 1, #timeChars do
-                result = result .. timeChars[i]
-            end
-            result = result .. "<</TIME>>"
-            
-            -- Now encode the actual string
-            for i = 1, #str do
-                local char = string.sub(str, i, i)
-                local byte = string.byte(char)
-                
-                -- Create a complex transformation based on position, key, and byte value
-                keyValue = (keyValue * 75) % 79
-                local transformedValue = (byte * 13 + keyValue * 29 + i * 7) % 80
-                
-                -- Split into four indices to use different character sets
-                local index1 = (transformedValue % 20) + 1
-                local index2 = ((transformedValue + 17) % 20) + 21
-                local index3 = ((transformedValue + 37) % 20) + 41
-                local index4 = ((transformedValue + 59) % 20) + 61
-                
-                -- Get characters from different sections of our character set
-                local char1 = charSet[index1]
-                local char2 = charSet[index2]
-                local char3 = charSet[index3]
-                local char4 = charSet[index4]
-                
-                -- Add a position-based separator
-                local separator = (i % 5 == 0) and "." or 
-                                 (i % 5 == 1) and "_" or
-                                 (i % 5 == 2) and "-" or
-                                 (i % 5 == 3) and "+" or ":"
-                
-                -- Add the encoded group
-                result = result .. char1 .. char2 .. char3 .. char4 .. separator
-            end
-            
-            -- Add a verification signature
-            local verificationHash = secureHash(str .. tostring(key) .. tostring(timestamp))
-            local verificationChars = {}
-            local verStr = tostring(verificationHash)
-            for i = 1, math.min(8, #verStr) do
-                local digit = tonumber(string.sub(verStr, i, i))
-                verificationChars[i] = charSet[digit + 1]
-            end
-            
-            result = result .. "<<VERIFY>>"
-            for i = 1, #verificationChars do
-                result = result .. verificationChars[i]
-            end
-            result = result .. "<</VERIFY>>"
-            
-            return result
-        end
-        
-        -- Generate the final whitelist string
-        local finalString = customEncode(whitelistString, hash)
-        print("Generated whitelist string:", finalString)
-        return finalString
-    end,
+        return nil
+    end
     
-    VerifyAccess = function(self, whitelistData)
-        -- Generate the user's whitelist string
-        local userWhitelistString = self:GenerateWhitelistString()
+    -- Get HWID with multiple fallbacks
+    local hwid = nil
+    hwid = safecall(function() return getexecutorhwid() end)
+    if not hwid then hwid = safecall(function() return gethwid() end) end
+    if not hwid then hwid = safecall(function() return get_hwid() end) end
+    if not hwid then hwid = safecall(function() return getexecutoridentifier() end) end
+    if not hwid then hwid = "UNKNOWN_HWID" end
+    
+    -- Get user data
+    local userId = game:GetService("Players").LocalPlayer.UserId
+    
+    -- Get client ID
+    local clientID = "UNKNOWN_CLIENT_ID"
+    pcall(function()
+        clientID = game:GetService("RbxAnalyticsService"):GetClientId()
+    end)
+    
+    -- Create a persistent ID
+    local function getPersistentID()
+        local HttpService = game:GetService("HttpService")
+        local filename = "lurnai_persistent_id.dat"
         
-        -- Check if the user's whitelist string is in the whitelist
-        for _, whitelistedString in ipairs(whitelistData) do
-            if whitelistedString == userWhitelistString then
-                print("✅ Access granted! You are whitelisted.")
-                return true
-            end
+        local existingID = nil
+        pcall(function()
+            if readfile then existingID = readfile(filename) end
+        end)
+        
+        if existingID and #existingID > 10 then
+            return existingID
         end
         
-        print("❌ Access denied! You are not whitelisted.")
-        -- Copy the user's whitelist string to clipboard for easy whitelisting
+        local newID = HttpService:GenerateGUID(false)
+        pcall(function()
+            if writefile then writefile(filename, newID) end
+        end)
+        
+        return newID
+    end
+    
+    local persistentID = getPersistentID()
+    
+    -- Get player name
+    local playerName = game:GetService("Players").LocalPlayer.Name
+    
+    -- Get executor name
+    local executorName = "Unknown"
+    pcall(function()
+        if identifyexecutor then executorName = identifyexecutor() end
+        if executorName == "Unknown" and getexecutorname then executorName = getexecutorname() end
+    end)
+    
+    -- Format the whitelist string with all identifiers
+    local whitelistString = string.format("Lurnai_%s_%s_%s_%s_%s_%s", 
+        hwid,
+        tostring(userId),
+        tostring(persistentID),
+        tostring(clientID),
+        playerName,
+        executorName
+    )
+    
+    -- Create a secure hash
+    local function secureHash(str)
+        local h = 0x21F4A3B7
+        for i = 1, #str do
+            local byte = string.byte(str, i)
+            h = ((h * 31) + byte) % 0x7FFFFFFF
+            local h_shifted = math.floor(h / 8192)
+            h = ((h - (h_shifted * 8192)) * 0x85EBCA77) % 0x7FFFFFFF
+            h_shifted = math.floor(h / 65536)
+            h = ((h - (h_shifted * 65536)) * 0xC2B2AE3D) % 0x7FFFFFFF
+            h_shifted = math.floor(h / 65536)
+            h = (h - (h_shifted * 65536)) % 0x7FFFFFFF
+        end
+        return h
+    end
+    
+    -- Create a unique key from the hash and timestamp
+    local timestamp = os.time()
+    local hash = secureHash(whitelistString .. tostring(timestamp))
+    
+    -- Create a character set
+    local charSet = {
+        -- Set 1 (20 chars)
+        "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
+        "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
+        
+        -- Set 2 (20 chars)
+        "a", "b", "c", "d", "e", "f", "g", "h", "i", "j",
+        "k", "l", "m", "n", "o", "p", "q", "r", "s", "t",
+        
+        -- Set 3 (20 chars)
+        "U", "V", "W", "X", "Y", "Z", "0", "1", "2", "3",
+        "4", "5", "6", "7", "8", "9", "!", "@", "#", "$",
+        
+        -- Set 4 (20 chars)
+        "u", "v", "w", "x", "y", "z", "%", "^", "&", "*",
+        "(", ")", "-", "+", "=", "[", "]", "{", "}", ";"
+    }
+    
+    -- Create a custom encoding function
+    local function customEncode(str, key)
+        local result = ""
+        local keyValue = key
+        
+        -- Add a marker prefix
+        result = "##SECURE##"
+        
+        -- Encode the timestamp
+        local timeChars = {}
+        local timeStr = tostring(timestamp)
+        for i = 1, #timeStr do
+            local digit = tonumber(string.sub(timeStr, i, i))
+            timeChars[i] = charSet[digit + 1]
+        end
+        
+        -- Add timestamp markers
+        result = result .. "<<TIME>>"
+        for i = 1, #timeChars do
+            result = result .. timeChars[i]
+        end
+        result = result .. "<</TIME>>"
+        
+        -- Now encode the actual string
+        for i = 1, #str do
+            local char = string.sub(str, i, i)
+            local byte = string.byte(char)
+            
+            -- Create a complex transformation based on position, key, and byte value
+            keyValue = (keyValue * 75) % 79
+            local transformedValue = (byte * 13 + keyValue * 29 + i * 7) % 80
+            
+            -- Split into four indices to use different character sets
+            local index1 = (transformedValue % 20) + 1
+            local index2 = ((transformedValue + 17) % 20) + 21
+            local index3 = ((transformedValue + 37) % 20) + 41
+            local index4 = ((transformedValue + 59) % 20) + 61
+            
+            -- Get characters from different sections of our character set
+            local char1 = charSet[index1]
+            local char2 = charSet[index2]
+            local char3 = charSet[index3]
+            local char4 = charSet[index4]
+            
+            -- Add a position-based separator
+            local separator = (i % 5 == 0) and "." or 
+                             (i % 5 == 1) and "_" or
+                             (i % 5 == 2) and "-" or
+                             (i % 5 == 3) and "+" or ":"
+            
+            -- Add the encoded group
+            result = result .. char1 .. char2 .. char3 .. char4 .. separator
+        end
+        
+        -- Add a verification signature
+        local verificationHash = secureHash(str .. tostring(key) .. tostring(timestamp))
+        local verificationChars = {}
+        local verStr = tostring(verificationHash)
+        for i = 1, math.min(8, #verStr) do
+            local digit = tonumber(string.sub(verStr, i, i))
+            verificationChars[i] = charSet[digit + 1]
+        end
+        
+        result = result .. "<<VERIFY>>"
+        for i = 1, #verificationChars do
+            result = result .. verificationChars[i]
+        end
+        result = result .. "<</VERIFY>>"
+        
+        return result
+    end
+    
+    -- Generate both the original and encoded whitelist strings
+    local originalString = whitelistString
+    local encodedString = customEncode(whitelistString, hash)
+    
+    return {
+        original = originalString,
+        encoded = encodedString
+    }
+end
+
+-- Create a mapping between original and encoded strings
+function WhitelistSystem:CreateWhitelistMapping(whitelistData)
+    local mapping = {}
+    
+    for _, entry in ipairs(whitelistData) do
+        if type(entry) == "string" and entry:sub(1, 10) == "##SECURE##" then
+            -- This is already an encoded string, we need to skip it
+            debugPrint("Skipping already encoded entry")
+        elseif type(entry) == "string" and entry:sub(1, 7) == "Lurnai_" then
+            -- This is an original string, we need to create a mapping
+            -- Note: In a real implementation, you'd need to store the mapping
+            -- This is just a placeholder since we can't actually encode without the original key
+            mapping[entry] = "ENCODED_" .. entry
+            debugPrint("Created mapping for", entry)
+        end
+    end
+    
+    return mapping
+end
+
+-- Fetch whitelist data from GitHub
+function WhitelistSystem:FetchWhitelistData()
+    local success, result = pcall(function()
+        local HttpService = game:GetService("HttpService")
+        local response = game:HttpGet(self.Config.GitHubRawURL)
+        
+        -- Basic validation to ensure it's a Lua table
+        if response:match("return%s*{") then
+            -- Use loadstring to convert the response to a Lua table
+            local func, err = loadstring(response)
+            if func then
+                local whitelistData = func()
+                if type(whitelistData) == "table" then
+                    return whitelistData
+                else
+                    error("Whitelist data is not a table")
+                end
+            else
+                error("Failed to parse whitelist data: " .. tostring(err))
+            end
+        else
+            error("Invalid whitelist data format")
+        end
+    end)
+    
+    if success then
+        debugPrint("Successfully fetched whitelist data from GitHub")
+        return result
+    else
+        debugPrint("Failed to fetch whitelist data from GitHub:", result)
+        return nil
+    end
+end
+
+-- Load whitelist data from local backup
+function WhitelistSystem:LoadLocalWhitelistData()
+    local success, result = pcall(function()
+        if readfile and self.Config.UseLocalBackup then
+            local content = readfile(self.Config.LocalBackupFile)
+            local func, err = loadstring(content)
+            if func then
+                local whitelistData = func()
+                if type(whitelistData) == "table" then
+                    return whitelistData
+                else
+                    error("Local whitelist data is not a table")
+                end
+            else
+                error("Failed to parse local whitelist data: " .. tostring(err))
+            end
+        else
+            error("Cannot read local files or local backup is disabled")
+        end
+    end)
+    
+    if success then
+        debugPrint("Successfully loaded whitelist data from local backup")
+        return result
+    else
+        debugPrint("Failed to load whitelist data from local backup:", result)
+        return nil
+    end
+end
+
+-- Save whitelist data to local backup
+function WhitelistSystem:SaveLocalWhitelistData(whitelistData)
+    local success, result = pcall(function()
+        if writefile and self.Config.UseLocalBackup then
+            local content = "-- Whitelist Data\n-- This file contains the list of whitelisted users\nreturn {\n"
+            
+            for _, entry in ipairs(whitelistData) do
+                content = content .. "    \"" .. entry .. "\",\n"
+            end
+            
+            content = content .. "}"
+            
+            writefile(self.Config.LocalBackupFile, content)
+            return true
+        else
+            error("Cannot write local files or local backup is disabled")
+        end
+    end)
+    
+    if success then
+        debugPrint("Successfully saved whitelist data to local backup")
+        return true
+    else
+        debugPrint("Failed to save whitelist data to local backup:", result)
+        return false
+    end
+end
+
+-- Check if a user is whitelisted
+function WhitelistSystem:CheckWhitelist()
+    -- Generate the user's whitelist string
+    local userWhitelistData = self:GenerateWhitelistString()
+    local userOriginalString = userWhitelistData.original
+    local userEncodedString = userWhitelistData.encoded
+    
+    debugPrint("User original whitelist string:", userOriginalString)
+    debugPrint("User encoded whitelist string:", userEncodedString)
+    
+    -- Try to fetch whitelist data from GitHub
+    local whitelistData = self:FetchWhitelistData()
+    
+    -- If GitHub fetch failed, try to load from local backup
+    if not whitelistData then
+        whitelistData = self:LoadLocalWhitelistData()
+    end
+    
+    -- If we still don't have whitelist data, create an empty table
+    if not whitelistData then
+        whitelistData = {}
+    end
+    
+    -- Check if the user's whitelist string is in the whitelist
+    local isWhitelisted = false
+    
+    for _, entry in ipairs(whitelistData) do
+        -- Check against both original and encoded strings
+        if entry == userOriginalString or entry == userEncodedString then
+            isWhitelisted = true
+            break
+        end
+    end
+    
+    -- If not whitelisted, copy the whitelist string to clipboard
+    if not isWhitelisted then
         pcall(function()
             if setclipboard then
-                setclipboard(userWhitelistString)
+                setclipboard(userOriginalString)
                 print("Your whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
             elseif writeclipboard then
-                writeclipboard(userWhitelistString)
+                writeclipboard(userOriginalString)
                 print("Your whitelist string has been copied to clipboard. Contact the developer to get whitelisted.")
             else
-                print("Your whitelist string: " .. userWhitelistString)
+                print("Your whitelist string: " .. userOriginalString)
                 print("Contact the developer with this string to get whitelisted.")
             end
         end)
         
-        return false
-    end
+        -- Create a template whitelist file if it doesn't exist
+        if self.Config.UseLocalBackup then
+            pcall(function()
+                if writefile and not isfile(self.Config.LocalBackupFile) then
+                    local content = [[
+-- Whitelist Data
+-- This file contains the list of whitelisted users
+return {
+    -- Add your whitelist strings here after running the script once
+    -- "]] .. userOriginalString .. [[",
 }
-
--- Empty whitelist data for testing
-local whitelistData = {}
-
--- Generate a whitelist string for the current user
-local userString = SecureWhitelist:GenerateWhitelistString()
-print("Add this string to your whitelist_data.lua file:")
-print(userString)
-
--- Verify access (will fail since whitelist is empty)
-local hasAccess = SecureWhitelist:VerifyAccess(whitelistData)
-if hasAccess then
-    print("Whitelist verification successful! You can now load your main script.")
-else
-    print("Whitelist verification failed. Please add your string to the whitelist.")
+]]
+                    writefile(self.Config.LocalBackupFile, content)
+                    print("Created a template whitelist file at: " .. self.Config.LocalBackupFile)
+                end
+            end)
+        end
+    end
+    
+    return isWhitelisted
 end
+
+-- Main function to initialize and check whitelist
+function WhitelistSystem:Initialize()
