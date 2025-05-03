@@ -30,31 +30,19 @@ local function fetchFromGitHub(url, retries)
     return nil
 end
 
--- Anti-tamper protection
-local function secureLoad(code)
-    local env = getfenv(0)
-    local secureEnv = setmetatable({}, {
-        __index = function(_, key)
-            return env[key]
-        end
-    })
-    
-    local func, err = loadstring(code)
-    if not func then
-        error("Failed to load code: " .. tostring(err))
-    end
-    
-    setfenv(func, secureEnv)
-    return func()
-end
-
 -- Load the whitelist system
 local whitelistSystemCode = fetchFromGitHub(whitelistSystemUrl)
 if not whitelistSystemCode then
     error("Failed to fetch whitelist system. Please check your internet connection.")
 end
 
-local WhitelistSystem = secureLoad(whitelistSystemCode)
+local success, WhitelistSystem = pcall(function()
+    return loadstring(whitelistSystemCode)()
+end)
+
+if not success then
+    error("Failed to load whitelist system: " .. tostring(WhitelistSystem))
+end
 
 -- Load the whitelist data
 local whitelistDataCode = fetchFromGitHub(whitelistDataUrl)
@@ -62,7 +50,13 @@ if not whitelistDataCode then
     error("Failed to fetch whitelist data. Please check your internet connection.")
 end
 
-local whitelistData = secureLoad(whitelistDataCode)
+local success, whitelistData = pcall(function()
+    return loadstring(whitelistDataCode)()
+end)
+
+if not success then
+    error("Failed to load whitelist data: " .. tostring(whitelistData))
+end
 
 -- Verify the user's access
 local hasAccess = WhitelistSystem:VerifyAccess(whitelistData)
@@ -76,7 +70,13 @@ if hasAccess then
     local mainScriptCode = fetchFromGitHub(mainScriptUrl)
     
     if mainScriptCode then
-        secureLoad(mainScriptCode)
+        local success, err = pcall(function()
+            loadstring(mainScriptCode)()
+        end)
+        
+        if not success then
+            error("Failed to execute main script: " .. tostring(err))
+        end
     else
         error("Failed to load main script. Please try again later.")
     end
