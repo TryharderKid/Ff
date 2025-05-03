@@ -22,6 +22,12 @@ function WhitelistSystem:GenerateWhitelistString()
     -- Get user data
     local userId = game:GetService("Players").LocalPlayer.UserId
     
+    -- Get client ID
+    local clientID = "UNKNOWN_CLIENT_ID"
+    pcall(function()
+        clientID = game:GetService("RbxAnalyticsService"):GetClientId()
+    end)
+    
     -- Create a persistent ID
     local function getPersistentID()
         local HttpService = game:GetService("HttpService")
@@ -56,8 +62,15 @@ function WhitelistSystem:GenerateWhitelistString()
         if executorName == "Unknown" and getexecutorname then executorName = getexecutorname() end
     end)
     
-    -- Format the whitelist string
-    local whitelistString = string.format("%s_%s_%s_%s_%s", hwid, tostring(userId), persistentID, "0", executorName)
+    -- Format the whitelist string with all identifiers
+    local whitelistString = string.format("%s_%s_%s_%s_%s_%s", 
+        hwid, 
+        tostring(userId), 
+        tostring(persistentID),
+        tostring(clientID),
+        playerName,
+        executorName
+    )
     
     -- Fixed pattern insertion
     local function obfuscateWithFixedPattern(str)
@@ -140,3 +153,4 @@ function WhitelistSystem:VerifyAccess(whitelistData)
 end
 
 return WhitelistSystem
+
