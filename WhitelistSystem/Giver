@@ -79,12 +79,11 @@ local SecureWhitelist = {
             for i = 1, #str do
                 local byte = string.byte(str, i)
                 h = ((h * 31) + byte) % 0x7FFFFFFF
-                -- Use bit operations that are compatible with Lua 5.1
-                local h_shifted = math.floor(h / 8192) -- equivalent to h >> 13
+                local h_shifted = math.floor(h / 8192)
                 h = ((h - (h_shifted * 8192)) * 0x85EBCA77) % 0x7FFFFFFF
-                h_shifted = math.floor(h / 65536) -- equivalent to h >> 16
+                h_shifted = math.floor(h / 65536)
                 h = ((h - (h_shifted * 65536)) * 0xC2B2AE3D) % 0x7FFFFFFF
-                h_shifted = math.floor(h / 65536) -- equivalent to h >> 16
+                h_shifted = math.floor(h / 65536)
                 h = (h - (h_shifted * 65536)) % 0x7FFFFFFF
             end
             return h
@@ -94,23 +93,23 @@ local SecureWhitelist = {
         local timestamp = os.time()
         local hash = secureHash(whitelistString .. tostring(timestamp))
         
-        -- Create a completely custom character set with no numbers
+        -- Create a simpler character set that should work in all environments
         local charSet = {
-            -- Mythical creatures (20 chars)
-            "🐉", "🦄", "🧚", "🧙", "🧜", "🧝", "🧞", "🧟", "👹", "👺", 
-            "👻", "👽", "👾", "🦊", "🦁", "🐲", "🦅", "🦇", "🦋", "🦂",
+            -- Set 1 (20 chars)
+            "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
+            "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
             
-            -- Celestial symbols (20 chars)
-            "⭐", "🌟", "💫", "✨", "☄️", "🌠", "🌌", "🪐", "🌑", "🌒", 
-            "🌓", "🌔", "🌕", "🌖", "🌗", "🌘", "🌙", "☀️", "🌞", "🌚",
+            -- Set 2 (20 chars)
+            "a", "b", "c", "d", "e", "f", "g", "h", "i", "j",
+            "k", "l", "m", "n", "o", "p", "q", "r", "s", "t",
             
-            -- Magical symbols (20 chars)
-            "✨", "💫", "⚡", "🔮", "⚔️", "🛡️", "🏹", "🗡️", "🧿", "📿", 
-            "🔯", "✡️", "☸️", "☯️", "✝️", "☦️", "☪️", "☮️", "🕉️", "🔱",
+            -- Set 3 (20 chars)
+            "U", "V", "W", "X", "Y", "Z", "0", "1", "2", "3",
+            "4", "5", "6", "7", "8", "9", "!", "@", "#", "$",
             
-            -- Ancient symbols (20 chars)
-            "𓀀", "𓀁", "𓀂", "𓀃", "𓀄", "𓀅", "𓀆", "𓀇", "𓀈", "𓀉", 
-            "𓀊", "𓀋", "𓀌", "𓀍", "𓀎", "𓀏", "𓀐", "𓀑", "𓀒", "𓀓"
+            -- Set 4 (20 chars)
+            "u", "v", "w", "x", "y", "z", "%", "^", "&", "*",
+            "(", ")", "-", "+", "=", "[", "]", "{", "}", ";"
         }
         
         -- Create a completely custom encoding function
@@ -118,23 +117,23 @@ local SecureWhitelist = {
             local result = ""
             local keyValue = key
             
-            -- Add a marker prefix that looks magical
-            result = "✧⚝🔮🧿"
+            -- Add a marker prefix
+            result = "##SECURE##"
             
-            -- Encode the timestamp in a way that doesn't expose numbers
+            -- Encode the timestamp
             local timeChars = {}
             local timeStr = tostring(timestamp)
             for i = 1, #timeStr do
                 local digit = tonumber(string.sub(timeStr, i, i))
-                timeChars[i] = charSet[digit + 1] -- +1 because Lua is 1-indexed
+                timeChars[i] = charSet[digit + 1]
             end
             
             -- Add timestamp markers
-            result = result .. "🕰️"
+            result = result .. "<<TIME>>"
             for i = 1, #timeChars do
                 result = result .. timeChars[i]
             end
-            result = result .. "🕰️"
+            result = result .. "<</TIME>>"
             
             -- Now encode the actual string
             for i = 1, #str do
@@ -142,7 +141,7 @@ local SecureWhitelist = {
                 local byte = string.byte(char)
                 
                 -- Create a complex transformation based on position, key, and byte value
-                keyValue = (keyValue * 75) % 79 -- Prime number operations for better distribution
+                keyValue = (keyValue * 75) % 79
                 local transformedValue = (byte * 13 + keyValue * 29 + i * 7) % 80
                 
                 -- Split into four indices to use different character sets
@@ -158,10 +157,10 @@ local SecureWhitelist = {
                 local char4 = charSet[index4]
                 
                 -- Add a position-based separator
-                local separator = (i % 5 == 0) and "✦" or 
-                                 (i % 5 == 1) and "✧" or
-                                 (i % 5 == 2) and "✪" or
-                                 (i % 5 == 3) and "✫" or "✬"
+                local separator = (i % 5 == 0) and "." or 
+                                 (i % 5 == 1) and "_" or
+                                 (i % 5 == 2) and "-" or
+                                 (i % 5 == 3) and "+" or ":"
                 
                 -- Add the encoded group
                 result = result .. char1 .. char2 .. char3 .. char4 .. separator
@@ -176,11 +175,11 @@ local SecureWhitelist = {
                 verificationChars[i] = charSet[digit + 1]
             end
             
-            result = result .. "🔒"
+            result = result .. "<<VERIFY>>"
             for i = 1, #verificationChars do
                 result = result .. verificationChars[i]
             end
-            result = result .. "🔒"
+            result = result .. "<</VERIFY>>"
             
             return result
         end
