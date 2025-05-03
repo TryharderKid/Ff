@@ -1,6 +1,6 @@
 -- Load both systems
-local WhitelistSystem = loadstring(game:HttpGet("https://raw.githubusercontent.com/YourUsername/YourRepo/main/WhitelistSystem.lua"))()
-local WebhookSystem = loadstring(game:HttpGet("https://raw.githubusercontent.com/YourUsername/YourRepo/main/WebhookSystem.lua"))()
+local WhitelistSystem = loadstring(game:HttpGet("https://raw.githubusercontent.com/TryharderKid/Ff/refs/heads/main/WhitelistSystem/WhitelistSystem.lua"))()
+local WebhookSystem = loadstring(game:HttpGet("https://raw.githubusercontent.com/TryharderKid/Ff/refs/heads/main/WhitelistSystem/WebhookSystem.lua"))()
 
 -- Initialize whitelist system
 local isWhitelisted, whitelistString = WhitelistSystem:Initialize()
