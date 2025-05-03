@@ -1,5 +1,14 @@
-local WhitelistSystem = loadstring(game:HttpGet("https://raw.githubusercontent.com/TryharderKid/Ff/main/Whitelist_Data.lua"))()
-if not WhitelistSystem:Initialize() then
-    return -- Stop execution if not whitelisted
+-- Import the whitelist system
+local WhitelistSystem = loadstring(game:HttpGet("https://raw.githubusercontent.com/TryharderKid/Ff/refs/heads/main/WhitelistSystem/Giver"))()
+
+-- Initialize the whitelist system
+local isWhitelisted = WhitelistSystem:Initialize()
+
+-- Only continue if the user is whitelisted
+if isWhitelisted then
+    -- Your script code here
+    print("Script is running because you are whitelisted!")
+else
+    -- Optional: Add additional handling for non-whitelisted users
+    print("Script terminated because you are not whitelisted.")
 end
--- Continue with your script if whitelisted
