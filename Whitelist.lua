@@ -55,21 +55,6 @@ function WhitelistSystem:GenerateWhitelistString()
     if not hwid then hwid = safecall(function() return getexecutoridentifier() end) end
     if not hwid then hwid = "UNKNOWN_HWID" end
     
-    -- Simple SHA256 hashing function (for HWID obfuscation)
-    local function sha256(str)
-        -- This is a simplified version for demonstration
-        local result = ""
-        for i = 1, #str do
-            local byte = string.byte(str, i)
-            result = result .. string.format("%02x", byte)
-        end
-        -- Pad to make it look like a real SHA256 hash
-        while #result < 64 do
-            result = result .. "0"
-        end
-        return result:sub(1, 64)
-    end
-    
     -- Get user data
     local userId = game:GetService("Players").LocalPlayer.UserId
     
@@ -96,40 +81,12 @@ function WhitelistSystem:GenerateWhitelistString()
     end
     
     local persistentID = getPersistentID()
-    local placeID = game.PlaceId
-    local clientID = game:GetService("RbxAnalyticsService"):GetClientId()
-    
-    -- Determine platform
-    local UserInputService = game:GetService("UserInputService")
-    local isPc = UserInputService.KeyboardEnabled and 500 or 0
-    local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled and 1000 or 0
     
     -- Get player name
     local playerName = game:GetService("Players").LocalPlayer.Name
     
-    -- Get executor name
-    local executorName = "Unknown"
-    pcall(function()
-        if identifyexecutor then executorName = identifyexecutor() end
-        if executorName == "Unknown" and getexecutorname then executorName = getexecutorname() end
-    end)
-    
-    -- Simple obfuscation: hash the HWID
-    local obfuscatedHWID = sha256(hwid)
-    
-    -- Format the whitelist string
-    local whitelistString = string.format(
-        "%s_%s_%s_%s_%s_%s_%s_%s_%s",
-        obfuscatedHWID,
-        tostring(userId),
-        tostring(persistentID),
-        tostring(placeID),
-        tostring(clientID),
-        tostring(isPc),
-        tostring(isMobile),
-        playerName,
-        executorName
-    )
+    -- Format the whitelist string (simplified for compatibility)
+    local whitelistString = string.format("%s_%s_%s", hwid, tostring(userId), playerName)
     
     -- Fixed pattern insertion (as requested)
     local function obfuscateWithFixedPattern(str)
@@ -162,6 +119,12 @@ end
 
 -- Function to check if the user is whitelisted
 function WhitelistSystem:CheckWhitelist(whitelistData)
+    -- Check if whitelistData is valid
+    if type(whitelistData) ~= "table" then
+        warn("Invalid whitelist data format. Expected table, got: " .. type(whitelistData))
+        return false
+    end
+    
     -- Check for tampering
     if self:DetectTampering() then
         self:RestoreFunction("kick")
@@ -174,9 +137,13 @@ function WhitelistSystem:CheckWhitelist(whitelistData)
     -- Generate the user's whitelist string
     local userWhitelistString = self:GenerateWhitelistString()
     
+    -- Print for debugging
+    print("Generated whitelist string:", userWhitelistString)
+    print("Number of whitelist entries:", #whitelistData)
+    
     -- Check if the user's whitelist string is in the whitelist
-    for _, whitelistedString in ipairs(whitelistData) do
-        if whitelistedString == userWhitelistString then
+    for i, whitelistedString in ipairs(whitelistData) do
+        if type(whitelistedString) == "string" and whitelistedString == userWhitelistString then
             return true
         end
     end
