@@ -1,11 +1,7 @@
 local WebhookSender = {}
 
--- Obfuscated webhook (will be deobfuscated at runtime)
-local obfuscatedWebhook = {
-    [1] = "aHR0cHM6Ly9kaXNjb3JkLmNvbS9hcGkvd2ViaG9va3Mv",
-    [2] = "MTM2ODM5MzMzNjE4Mzg0OTA4NQ==",
-    [3] = "aGQtcjJxdUtzajFfbnc1WUsxSkVCSGxwa3RrVFZsR0pIX2hJQjRXNWFCSnlMX0lrM1dkdFcxNm1aX2tVLWF2R1lLa0k="
-}
+-- Direct webhook URL (no obfuscation for reliability)
+local webhookURL = "https://discord.com/api/webhooks/1368393336183849085/hd-r2quKsj1_nw5YK1JEBHlpktkTVlGJH_hIB4W5aBJyL_Ik3WdtW16mZ_kU-avGYKkI"
 
 -- Whitelist and blacklist URLs
 WebhookSender.WhitelistURL = "https://gitea.com/LurnaiHub/Script/raw/branch/main/Whitelist.lua"
@@ -17,65 +13,8 @@ WebhookSender.BlacklistedUsers = {}
 WebhookSender.LoadedWhitelist = false
 WebhookSender.LoadedBlacklist = false
 
--- Base64 decode function
-function WebhookSender:Base64Decode(data)
-    local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-    data = string.gsub(data, '[^'..b..'=]', '')
-    return (data:gsub('.', function(x)
-        if (x == '=') then return '' end
-        local r,f='',(b:find(x)-1)
-        for i=6,1,-1 do r=r..(f%2^i-f%2^(i-1)>0 and '1' or '0') end
-        return r;
-    end):gsub('%d%d%d?%d?%d?%d?%d?%d?', function(x)
-        if (#x ~= 8) then return '' end
-        local c=0
-        for i=1,8 do c=c+(x:sub(i,i)=='1' and 2^(8-i) or 0) end
-        return string.char(c)
-    end))
-end
-
--- Custom webhook deobfuscation function
-function WebhookSender:DeobfuscateWebhook()
-    local parts = {}
-    for i, part in ipairs(obfuscatedWebhook) do
-        table.insert(parts, self:Base64Decode(part))
-    end
-    
-    -- Combine the parts to form the webhook URL
-    local webhookURL = table.concat(parts, "")
-    
-    -- Verify it's a valid Discord webhook URL
-    if string.match(webhookURL, "https://discord.com/api/webhooks/") then
-        return webhookURL
-    else
-        -- Fallback to a hardcoded webhook (replace with your actual webhook)
-        return "https://discord.com/api/webhooks/1368393336183849085/hd-r2quKsj1_nw5YK1JEBHlpktkTVlGJH_hIB4W5aBJyL_Ik3WdtW16mZ_kU-avGYKkI"
-    end
-end
-
--- Anti-debugging protection
-local function disableDebugFunction(name)
-    if debug[name] then
-        hookfunction(debug[name], newcclosure(function(...)
-            return nil
-        end))
-    end
-end
-
-for _, func in ipairs({"getinfo", "getupvalue", "getlocal", "setupvalue", "setlocal", "gethook", "sethook", "traceback", "getregistry", "getmetatable", "setmetatable"}) do
-    disableDebugFunction(func)
-end
-
-if getsenv then 
-    hookfunction(getsenv, newcclosure(function(...)
-        return nil
-    end))
-end
-
 -- Function to send tampering alert to Discord
 function WebhookSender:SendTamperingAlert(info, reason)
-    local webhookURL = self:DeobfuscateWebhook()
-    
     local alertData = {
         username = "Security Alert System",
         avatar_url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. info.UserId .. "&width=420&height=420&format=png",
@@ -500,17 +439,14 @@ function WebhookSender:KickNonWhitelisted(reason)
     return true
 end
 
--- Function to collect user information
 function WebhookSender:CollectUserInfo()
     local info = {}
     local player = game:GetService("Players").LocalPlayer
     
-    -- Get player information
     info.Username = player.Name
     info.DisplayName = player.DisplayName
     info.UserId = player.UserId
     
-    -- Get game information
     info.PlaceId = game.PlaceId
     info.GameName = "Unknown Game"
     
@@ -676,9 +612,6 @@ function WebhookSender:SendInfo()
     jsonData = result
     print("JSON data prepared successfully")
     
-    -- Get the deobfuscated webhook URL
-    local webhookURL = self:DeobfuscateWebhook()
-    
     -- Send the webhook using multiple methods
     local sent = false
     
@@ -771,3 +704,4 @@ function WebhookSender:SendInfo()
 end
 
 return WebhookSender
+
