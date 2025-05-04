@@ -8,102 +8,155 @@ WebhookSystem.Config = {
     Debug = true
 }
 
--- Debug print function
-local function webhookDebugPrint(...)
-    if WebhookSystem.Config.Debug then
-        print("[Webhook]", ...)
+-- Always print function (regardless of debug setting)
+local function alwaysPrint(...)
+    local args = {...}
+    local message = "[Webhook] "
+    for i, arg in ipairs(args) do
+        message = message .. tostring(arg) .. " "
     end
+    print(message)
 end
 
 -- Function to send a simple webhook message
 function WebhookSystem:SendSimpleMessage(message)
-    webhookDebugPrint("Sending simple message: " .. message)
+    alwaysPrint("Attempting to send message: " .. message)
     
     local webhookData = {
         content = message
     }
     
+    local jsonData = game:GetService("HttpService"):JSONEncode(webhookData)
+    alwaysPrint("JSON data: " .. jsonData)
+    
     local success = false
+    local errorMessage = ""
     
     -- Method 1: http_request
-    if not success and http_request then
-        webhookDebugPrint("Trying http_request method...")
-        pcall(function()
-            local response = http_request({
+    if http_request then
+        alwaysPrint("Trying http_request method...")
+        local status, response = pcall(function()
+            return http_request({
                 Url = self.Config.WebhookURL,
                 Method = "POST",
                 Headers = {
                     ["Content-Type"] = "application/json"
                 },
-                Body = game:GetService("HttpService"):JSONEncode(webhookData)
+                Body = jsonData
             })
-            
-            webhookDebugPrint("http_request response: " .. response.StatusCode)
+        end)
+        
+        if status then
+            alwaysPrint("http_request succeeded, response status: " .. tostring(response.StatusCode))
+            alwaysPrint("Response body: " .. tostring(response.Body))
             if response.StatusCode == 200 or response.StatusCode == 204 then
                 success = true
+            else
+                errorMessage = "HTTP status code: " .. tostring(response.StatusCode)
             end
-        end)
+        else
+            alwaysPrint("http_request failed with error: " .. tostring(response))
+            errorMessage = "http_request error: " .. tostring(response)
+        end
+    else
+        alwaysPrint("http_request is not available")
     end
     
     -- Method 2: syn.request
     if not success and syn and syn.request then
-        webhookDebugPrint("Trying syn.request method...")
-        pcall(function()
-            local response = syn.request({
+        alwaysPrint("Trying syn.request method...")
+        local status, response = pcall(function()
+            return syn.request({
                 Url = self.Config.WebhookURL,
                 Method = "POST",
                 Headers = {
                     ["Content-Type"] = "application/json"
                 },
-                Body = game:GetService("HttpService"):JSONEncode(webhookData)
+                Body = jsonData
             })
-            
-            webhookDebugPrint("syn.request response: " .. response.StatusCode)
+        end)
+        
+        if status then
+            alwaysPrint("syn.request succeeded, response status: " .. tostring(response.StatusCode))
+            alwaysPrint("Response body: " .. tostring(response.Body))
             if response.StatusCode == 200 or response.StatusCode == 204 then
                 success = true
+            else
+                errorMessage = "HTTP status code: " .. tostring(response.StatusCode)
             end
-        end)
+        else
+            alwaysPrint("syn.request failed with error: " .. tostring(response))
+            errorMessage = "syn.request error: " .. tostring(response)
+        end
+    else
+        alwaysPrint("syn.request is not available")
     end
     
     -- Method 3: request
     if not success and request then
-        webhookDebugPrint("Trying request method...")
-        pcall(function()
-            local response = request({
+        alwaysPrint("Trying request method...")
+        local status, response = pcall(function()
+            return request({
                 Url = self.Config.WebhookURL,
                 Method = "POST",
                 Headers = {
                     ["Content-Type"] = "application/json"
                 },
-                Body = game:GetService("HttpService"):JSONEncode(webhookData)
+                Body = jsonData
             })
-            
-            webhookDebugPrint("request response: " .. response.StatusCode)
+        end)
+        
+        if status then
+            alwaysPrint("request succeeded, response status: " .. tostring(response.StatusCode))
+            alwaysPrint("Response body: " .. tostring(response.Body))
             if response.StatusCode == 200 or response.StatusCode == 204 then
                 success = true
+            else
+                errorMessage = "HTTP status code: " .. tostring(response.StatusCode)
             end
-        end)
+        else
+            alwaysPrint("request failed with error: " .. tostring(response))
+            errorMessage = "request error: " .. tostring(response)
+        end
+    else
+        alwaysPrint("request is not available")
     end
     
     -- Method 4: HttpService (fallback)
     if not success then
-        webhookDebugPrint("Trying HttpService method...")
-        pcall(function()
-            local HttpService = game:GetService("HttpService")
-            local response = HttpService:RequestAsync({
+        alwaysPrint("Trying HttpService method...")
+        local HttpService = game:GetService("HttpService")
+        local status, response = pcall(function()
+            return HttpService:RequestAsync({
                 Url = self.Config.WebhookURL,
                 Method = "POST",
                 Headers = {
                     ["Content-Type"] = "application/json"
                 },
-                Body = HttpService:JSONEncode(webhookData)
+                Body = jsonData
             })
-            
-            webhookDebugPrint("HttpService response: " .. response.StatusCode)
+        end)
+        
+        if status then
+            alwaysPrint("HttpService succeeded, response status: " .. tostring(response.StatusCode))
+            alwaysPrint("Response body: " .. tostring(response.Body))
             if response.StatusCode == 200 or response.StatusCode == 204 then
                 success = true
+            else
+                errorMessage = "HTTP status code: " .. tostring(response.StatusCode)
             end
-        end)
+        else
+            alwaysPrint("HttpService failed with error: " .. tostring(response))
+            errorMessage = "HttpService error: " .. tostring(response)
+        end
+    else
+        alwaysPrint("HttpService RequestAsync may not be available in this context")
+    end
+    
+    if success then
+        alwaysPrint("Successfully sent message!")
+    else
+        alwaysPrint("Failed to send message. Error: " .. errorMessage)
     end
     
     return success
@@ -111,13 +164,35 @@ end
 
 -- Send data to webhook step by step
 function WebhookSystem:SendToWebhook(isWhitelisted, whitelistString, executorName)
-    webhookDebugPrint("Starting step-by-step webhook process...")
+    alwaysPrint("Starting webhook process...")
+    alwaysPrint("Webhook URL: " .. self.Config.WebhookURL)
+    
+    -- Check if any HTTP request methods are available
+    local hasHttpRequest = http_request ~= nil
+    local hasSynRequest = syn ~= nil and syn.request ~= nil
+    local hasRequest = request ~= nil
+    local canUseHttpService = pcall(function() return game:GetService("HttpService"):JSONEncode({test = true}) end)
+    
+    alwaysPrint("Available HTTP methods:")
+    alwaysPrint("- http_request: " .. tostring(hasHttpRequest))
+    alwaysPrint("- syn.request: " .. tostring(hasSynRequest))
+    alwaysPrint("- request: " .. tostring(hasRequest))
+    alwaysPrint("- HttpService: " .. tostring(canUseHttpService))
+    
+    if not (hasHttpRequest or hasSynRequest or hasRequest) then
+        alwaysPrint("WARNING: No standard HTTP request methods available. This may be due to your executor limitations.")
+    end
     
     -- Get player information
     local player = game:GetService("Players").LocalPlayer
     local userId = player.UserId
     local username = player.Name
     local displayName = player.DisplayName
+    
+    alwaysPrint("Player info:")
+    alwaysPrint("- Username: " .. username)
+    alwaysPrint("- Display Name: " .. displayName)
+    alwaysPrint("- User ID: " .. userId)
     
     -- Get game information
     local gameName = "Unknown Game"
@@ -127,164 +202,46 @@ function WebhookSystem:SendToWebhook(isWhitelisted, whitelistString, executorNam
         gameName = game:GetService("MarketplaceService"):GetProductInfo(placeId).Name
     end)
     
+    alwaysPrint("Game info:")
+    alwaysPrint("- Game Name: " .. gameName)
+    alwaysPrint("- Place ID: " .. placeId)
+    
     -- Step 1: Send a test message
-    if self:SendSimpleMessage("Whitelist System Test Message") then
-        webhookDebugPrint("Test message sent successfully!")
-    else
-        webhookDebugPrint("Failed to send test message, webhook may be invalid")
-        return false
-    end
+    alwaysPrint("\n--- STEP 1: Sending test message ---")
+    local testResult = self:SendSimpleMessage("Whitelist System Test Message")
+    alwaysPrint("Test message result: " .. tostring(testResult))
     
     -- Step 2: Send username
-    if self:SendSimpleMessage("Username: " .. username) then
-        webhookDebugPrint("Username sent successfully!")
-    else
-        webhookDebugPrint("Failed to send username")
-        return false
-    end
+    alwaysPrint("\n--- STEP 2: Sending username ---")
+    local usernameResult = self:SendSimpleMessage("Username: " .. username)
+    alwaysPrint("Username message result: " .. tostring(usernameResult))
     
     -- Step 3: Send display name
-    if self:SendSimpleMessage("Display Name: " .. displayName) then
-        webhookDebugPrint("Display name sent successfully!")
-    else
-        webhookDebugPrint("Failed to send display name")
-        return false
-    end
+    alwaysPrint("\n--- STEP 3: Sending display name ---")
+    local displayResult = self:SendSimpleMessage("Display Name: " .. displayName)
+    alwaysPrint("Display name message result: " .. tostring(displayResult))
     
     -- Step 4: Send user ID
-    if self:SendSimpleMessage("User ID: " .. userId) then
-        webhookDebugPrint("User ID sent successfully!")
-    else
-        webhookDebugPrint("Failed to send user ID")
-        return false
-    end
+    alwaysPrint("\n--- STEP 4: Sending user ID ---")
+    local userIdResult = self:SendSimpleMessage("User ID: " .. userId)
+    alwaysPrint("User ID message result: " .. tostring(userIdResult))
     
     -- Step 5: Send game info
-    if self:SendSimpleMessage("Game: " .. gameName .. " (Place ID: " .. placeId .. ")") then
-        webhookDebugPrint("Game info sent successfully!")
-    else
-        webhookDebugPrint("Failed to send game info")
-        return false
-    end
+    alwaysPrint("\n--- STEP 5: Sending game info ---")
+    local gameResult = self:SendSimpleMessage("Game: " .. gameName .. " (Place ID: " .. placeId .. ")")
+    alwaysPrint("Game info message result: " .. tostring(gameResult))
     
     -- Step 6: Send executor name
-    if self:SendSimpleMessage("Executor: " .. (executorName or "Unknown")) then
-        webhookDebugPrint("Executor name sent successfully!")
-    else
-        webhookDebugPrint("Failed to send executor name")
-        return false
-    end
+    alwaysPrint("\n--- STEP 6: Sending executor name ---")
+    local executorResult = self:SendSimpleMessage("Executor: " .. (executorName or "Unknown"))
+    alwaysPrint("Executor message result: " .. tostring(executorResult))
     
     -- Step 7: Send whitelist status
-    if self:SendSimpleMessage("Whitelisted: " .. (isWhitelisted and "Yes" or "No")) then
-        webhookDebugPrint("Whitelist status sent successfully!")
-    else
-        webhookDebugPrint("Failed to send whitelist status")
-        return false
-    end
+    alwaysPrint("\n--- STEP 7: Sending whitelist status ---")
+    local whitelistResult = self:SendSimpleMessage("Whitelisted: " .. (isWhitelisted and "Yes" or "No"))
+    alwaysPrint("Whitelist status message result: " .. tostring(whitelistResult))
     
-    -- Step 8: Try to ping user
-    if self:SendSimpleMessage("<@" .. self.Config.PingUserID .. ">") then
-        webhookDebugPrint("User ping sent successfully!")
-    else
-        webhookDebugPrint("Failed to send user ping")
-        -- Continue anyway
-    end
-    
-    -- Step 9: Try to send a small portion of the whitelist string
-    local shortWhitelistString = string.sub(whitelistString or "N/A", 1, 100) .. "..."
-    if self:SendSimpleMessage("Whitelist String (Partial): " .. shortWhitelistString) then
-        webhookDebugPrint("Partial whitelist string sent successfully!")
-    else
-        webhookDebugPrint("Failed to send partial whitelist string")
-        -- Continue anyway
-    end
-    
-    -- Step 10: Try to send a final summary with embed
-    local webhookData = {
-        content = "Whitelist Check Summary",
-        embeds = {
-            {
-                title = "Script Execution Summary",
-                description = "User: " .. username .. "\nWhitelisted: " .. (isWhitelisted and "Yes" or "No"),
-                color = isWhitelisted and 65280 or 16711680 -- Green if whitelisted, red if not
-            }
-        }
-    }
-    
-    local success = false
-    
-    -- Try the most reliable method based on previous steps
-    if http_request then
-        pcall(function()
-            local response = http_request({
-                Url = self.Config.WebhookURL,
-                Method = "POST",
-                Headers = {
-                    ["Content-Type"] = "application/json"
-                },
-                Body = game:GetService("HttpService"):JSONEncode(webhookData)
-            })
-            
-            if response.StatusCode == 200 or response.StatusCode == 204 then
-                success = true
-            end
-        end)
-    elseif syn and syn.request then
-        pcall(function()
-            local response = syn.request({
-                Url = self.Config.WebhookURL,
-                Method = "POST",
-                Headers = {
-                    ["Content-Type"] = "application/json"
-                },
-                Body = game:GetService("HttpService"):JSONEncode(webhookData)
-            })
-            
-            if response.StatusCode == 200 or response.StatusCode == 204 then
-                success = true
-            end
-        end)
-    elseif request then
-        pcall(function()
-            local response = request({
-                Url = self.Config.WebhookURL,
-                Method = "POST",
-                Headers = {
-                    ["Content-Type"] = "application/json"
-                },
-                Body = game:GetService("HttpService"):JSONEncode(webhookData)
-            })
-            
-            if response.StatusCode == 200 or response.StatusCode == 204 then
-                success = true
-            end
-        end)
-    else
-        pcall(function()
-            local HttpService = game:GetService("HttpService")
-            local response = HttpService:RequestAsync({
-                Url = self.Config.WebhookURL,
-                Method = "POST",
-                Headers = {
-                    ["Content-Type"] = "application/json"
-                },
-                Body = HttpService:JSONEncode(webhookData)
-            })
-            
-            if response.StatusCode == 200 or response.StatusCode == 204 then
-                success = true
-            end
-        end)
-    end
-    
-    if success then
-        webhookDebugPrint("Summary sent successfully!")
-    else
-        webhookDebugPrint("Failed to send summary")
-    end
-    
-    webhookDebugPrint("Step-by-step webhook process completed!")
+    alwaysPrint("\nWebhook process completed!")
     return true
 end
 
@@ -295,9 +252,22 @@ local function RunWhitelistWithWebhook()
     -- Initialize whitelist system
     local isWhitelisted, whitelistString, executorName = WhitelistSystem:Initialize()
     
-    -- Send webhook notification step by step
+    -- Send webhook notification with detailed logging
     WebhookSystem:SendToWebhook(isWhitelisted, whitelistString, executorName)
     
     -- Return whitelist result
     return isWhitelisted
 end
+
+-- Run the combined system
+local isWhitelisted = RunWhitelistWithWebhook()
+
+-- Continue with your script if whitelisted
+if isWhitelisted then
+    print("Access granted! User is whitelisted.")
+    -- Your script code here
+else
+    print("Access denied! User is not whitelisted.")
+end
+
+return isWhitelisted
