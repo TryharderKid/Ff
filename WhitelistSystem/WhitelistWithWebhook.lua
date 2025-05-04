@@ -1,347 +1,3 @@
--- Combined Whitelist and Webhook System
--- Whitelist System
-local WhitelistSystem = {}
-
--- Configuration
-WhitelistSystem.Config = {
-    LocalFile = "Whitelist_System.lua",
-    GitHubRawURL = "https://raw.githubusercontent.com/TryharderKid/Ff/main/WWhitelist_Data.lua",
-    Debug = false
-}
-
--- Debug print function
-local function debugPrint(...)
-    if WhitelistSystem.Config.Debug then
-        print("[Whitelist]", ...)
-    end
-end
-
--- Generate a whitelist string for the current user
-function WhitelistSystem:GenerateWhitelistString()
-    local function safecall(func, ...)
-        if type(func) == "function" then
-            local success, result = pcall(func, ...)
-            if success then return result end
-        end
-        return nil
-    end
-    
-    local hwid = nil
-    hwid = safecall(function() return getexecutorhwid() end)
-    if not hwid then hwid = safecall(function() return gethwid() end) end
-    if not hwid then hwid = safecall(function() return get_hwid() end) end
-    if not hwid then hwid = safecall(function() return getexecutoridentifier() end) end
-    if not hwid then hwid = "UNKNOWN_HWID" end
-    
-    local userId = game:GetService("Players").LocalPlayer.UserId
-    
-    local clientID = "UNKNOWN_CLIENT_ID"
-    pcall(function()
-        clientID = game:GetService("RbxAnalyticsService"):GetClientId()
-    end)
-    
-    local function getPersistentID()
-        local HttpService = game:GetService("HttpService")
-        local filename = "lurnai_persistent_id.dat"
-        
-        local existingID = nil
-        pcall(function()
-            if readfile then existingID = readfile(filename) end
-        end)
-        
-        if existingID and #existingID > 10 then
-            return existingID
-        end
-        
-        local newID = HttpService:GenerateGUID(false)
-        pcall(function()
-            if writefile then writefile(filename, newID) end
-        end)
-        
-        return newID
-    end
-    
-    local persistentID = getPersistentID()
-    
-    local playerName = game:GetService("Players").LocalPlayer.Name
-    
-    local executorName = "Unknown"
-    pcall(function()
-        if identifyexecutor then executorName = identifyexecutor() end
-        if executorName == "Unknown" and getexecutorname then executorName = getexecutorname() end
-    end)
-    
-    local whitelistString = string.format("Lurnai_%s_%s_%s_%s_%s_%s", 
-        hwid,
-        tostring(userId),
-        tostring(persistentID),
-        tostring(clientID),
-        playerName,
-        executorName
-    )
-    
-    return whitelistString, executorName
-end
-
--- Obfuscate the whitelist string
-function WhitelistSystem:ObfuscateWhitelistString(whitelistString)
-    local function secureHash(str)
-        local h = 0x21F4A3B7
-        for i = 1, #str do
-            local byte = string.byte(str, i)
-            h = ((h * 31) + byte) % 0x7FFFFFFF
-            local h_shifted = math.floor(h / 8192)
-            h = ((h - (h_shifted * 8192)) * 0x85EBCA77) % 0x7FFFFFFF
-            h_shifted = math.floor(h / 65536)
-            h = ((h - (h_shifted * 65536)) * 0xC2B2AE3D) % 0x7FFFFFFF
-            h_shifted = math.floor(h / 65536)
-            h = (h - (h_shifted * 65536)) % 0x7FFFFFFF
-        end
-        return h
-    end
-    
-    local timestamp = os.time()
-    local hash = secureHash(whitelistString .. tostring(timestamp))
-    
-    local charSet = {
-        "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
-        "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
-        
-        "a", "b", "c", "d", "e", "f", "g", "h", "i", "j",
-        "k", "l", "m", "n", "o", "p", "q", "r", "s", "t",
-        
-        "U", "V", "W", "X", "Y", "Z", "0", "1", "2", "3",
-        "4", "5", "6", "7", "8", "9", "!", "@", "#", "$",
-        
-        "u", "v", "w", "x", "y", "z", "%", "^", "&", "*",
-        "(", ")", "-", "+", "=", "[", "]", "{", "}", ";"
-    }
-    
-    local function customEncode(str, key)
-        local result = ""
-        local keyValue = key
-        
-        result = "##SECURE##"
-        
-        local timeChars = {}
-        local timeStr = tostring(timestamp)
-        for i = 1, #timeStr do
-            local digit = tonumber(string.sub(timeStr, i, i))
-            timeChars[i] = charSet[digit + 1]
-        end
-        
-        result = result .. "<<TIME>>"
-        for i = 1, #timeChars do
-            result = result .. timeChars[i]
-        end
-        result = result .. "<</TIME>>"
-        
-        for i = 1, #str do
-            local char = string.sub(str, i, i)
-            local byte = string.byte(char)
-            
-            keyValue = (keyValue * 75) % 79
-            local transformedValue = (byte * 13 + keyValue * 29 + i * 7) % 80
-            
-            local index1 = (transformedValue % 20) + 1
-            local index2 = ((transformedValue + 17) % 20) + 21
-            local index3 = ((transformedValue + 37) % 20) + 41
-            local index4 = ((transformedValue + 59) % 20) + 61
-            
-            local char1 = charSet[index1]
-            local char2 = charSet[index2]
-            local char3 = charSet[index3]
-            local char4 = charSet[index4]
-            
-            local separator = (i % 5 == 0) and "." or
-                              (i % 5 == 1) and "_" or
-                             (i % 5 == 2) and "-" or
-                             (i % 5 == 3) and "+" or ":"
-            
-            result = result .. char1 .. char2 .. char3 .. char4 .. separator
-        end
-        
-        local verificationHash = secureHash(str .. tostring(key) .. tostring(timestamp))
-        local verificationChars = {}
-        local verStr = tostring(verificationHash)
-        for i = 1, math.min(5, #verStr) do
-            local digit = tonumber(string.sub(verStr, i, i))
-            verificationChars[i] = charSet[digit + 1]
-        end
-        
-        result = result .. "<<VERIFY>>"
-        for i = 1, #verificationChars do
-            result = result .. verificationChars[i]
-        end
-        result = result .. "<</VERIFY>>"
-        
-        return result
-    end
-    
-    return customEncode(whitelistString, hash)
-end
-
--- Create or update the local whitelist file
-function WhitelistSystem:CreateLocalWhitelistFile()
-    local originalWhitelist, executorName = self:GenerateWhitelistString()
-    local obfuscatedWhitelist = self:ObfuscateWhitelistString(originalWhitelist)
-    
-    debugPrint("Generated original whitelist: " .. originalWhitelist)
-    debugPrint("Generated obfuscated whitelist: " .. obfuscatedWhitelist)
-    
-    local success, result = pcall(function()
-        if writefile then
-            local content = [[local WhitelistData = {
-    Original = "]] .. originalWhitelist .. [[",
-    Obfuscated = "]] .. obfuscatedWhitelist .. [["
-}
-return WhitelistData]]
-            
-            writefile(self.Config.LocalFile, content)
-            return true
-        else
-            error("Cannot write local files")
-        end
-    end)
-    
-    if success then
-        debugPrint("Successfully created local whitelist file")
-        return {
-            original = originalWhitelist,
-            obfuscated = obfuscatedWhitelist,
-            executor = executorName
-        }
-    else
-        debugPrint("Failed to create local whitelist file:", result)
-        return {
-            original = originalWhitelist,
-            obfuscated = obfuscatedWhitelist,
-            executor = executorName
-        }
-    end
-end
-
--- Load the local whitelist file
-function WhitelistSystem:LoadLocalWhitelistFile()
-    local success, result = pcall(function()
-        if readfile and isfile and isfile(self.Config.LocalFile) then
-            local content = readfile(self.Config.LocalFile)
-            local func, err = loadstring(content)
-            if func then
-                local whitelistData = func()
-                if type(whitelistData) == "table" and whitelistData.Original and whitelistData.Obfuscated then
-                    return whitelistData
-                else
-                    error("Invalid whitelist data format")
-                end
-            else
-                error("Failed to parse whitelist data: " .. tostring(err))
-            end
-        else
-            error("Whitelist file does not exist")
-        end
-    end)
-    
-    if success then
-        debugPrint("Successfully loaded local whitelist file")
-        local _, executorName = self:GenerateWhitelistString()
-        return {
-            original = result.Original,
-            obfuscated = result.Obfuscated,
-            executor = executorName
-        }
-    else
-        debugPrint("Failed to load local whitelist file:", result)
-        return nil
-    end
-end
-
--- Fetch whitelist data from GitHub
-function WhitelistSystem:FetchWhitelistData()
-    debugPrint("Fetching whitelist data from: " .. self.Config.GitHubRawURL)
-    
-    local success, result = pcall(function()
-        local response = game:HttpGet(self.Config.GitHubRawURL)
-        
-        debugPrint("Received response from GitHub")
-        
-        if response:match("return%s*{") then
-            local func, err = loadstring(response)
-            if func then
-                local whitelistData = func()
-                if type(whitelistData) == "table" then
-                    debugPrint("Successfully parsed whitelist data, entries: " .. #whitelistData)
-                    return whitelistData
-                else
-                    error("Whitelist data is not a table")
-                end
-            else
-                error("Failed to parse whitelist data: " .. tostring(err))
-            end
-        else
-            error("Invalid whitelist data format")
-        end
-    end)
-    
-    if success then
-        debugPrint("Successfully fetched whitelist data from GitHub")
-        return result
-    else
-        debugPrint("Failed to fetch whitelist data from GitHub:", result)
-        return nil
-    end
-end
-
--- Check if the user is whitelisted
-function WhitelistSystem:CheckWhitelist()
-    local localWhitelist = self:LoadLocalWhitelistFile()
-    
-    if not localWhitelist then
-        debugPrint("Creating new local whitelist file...")
-        localWhitelist = self:CreateLocalWhitelistFile()
-    end
-    
-    local githubWhitelist = self:FetchWhitelistData()
-    
-    if not githubWhitelist then
-        return false, localWhitelist.obfuscated, localWhitelist.executor
-    end
-    
-    debugPrint("Successfully fetched whitelist data, entries: " .. #githubWhitelist)
-    debugPrint("Checking if user is whitelisted...")
-    
-    for i, entry in ipairs(githubWhitelist) do
-        entry = entry:gsub("^%s*(.-)%s*$", "%1")
-        
-        debugPrint("Checking entry #" .. i .. ": " .. string.sub(entry, 1, 30) .. "...")
-        
-        if entry == localWhitelist.original then
-            debugPrint("Match found with original string!")
-            return true, localWhitelist.obfuscated, localWhitelist.executor
-        elseif entry == localWhitelist.obfuscated then
-            debugPrint("Match found with obfuscated string!")
-            return true, localWhitelist.obfuscated, localWhitelist.executor
-        end
-        
-        local cleanEntry = entry:gsub("%s", "")
-        local cleanOriginal = localWhitelist.original:gsub("%s", "")
-        local cleanObfuscated = localWhitelist.obfuscated:gsub("%s", "")
-        
-        if cleanEntry == cleanOriginal or cleanEntry == cleanObfuscated then
-            debugPrint("Match found after cleaning whitespace!")
-            return true, localWhitelist.obfuscated, localWhitelist.executor
-        end
-    end
-    
-    return false, localWhitelist.obfuscated, localWhitelist.executor
-end
-
--- Initialize the whitelist system
-function WhitelistSystem:Initialize()
-    local isWhitelisted, whitelistString, executorName = self:CheckWhitelist()
-    return isWhitelisted, whitelistString, executorName
-end
-
 -- Webhook System
 local WebhookSystem = {}
 
@@ -359,89 +15,14 @@ local function webhookDebugPrint(...)
     end
 end
 
--- Send data to webhook
-function WebhookSystem:SendToWebhook(isWhitelisted, whitelistString, executorName)
-    webhookDebugPrint("Preparing webhook data...")
+-- Function to send a simple webhook message
+function WebhookSystem:SendSimpleMessage(message)
+    webhookDebugPrint("Sending simple message: " .. message)
     
-    -- Get player information
-    local player = game:GetService("Players").LocalPlayer
-    local userId = player.UserId
-    local username = player.Name
-    local displayName = player.DisplayName
-    
-    -- Get player thumbnail URL
-    local thumbnailUrl = ""
-    pcall(function()
-        thumbnailUrl = game:GetService("Players"):GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
-    end)
-    
-    -- Get game information
-    local gameName = "Unknown Game"
-    local placeId = game.PlaceId
-    
-    pcall(function()
-        gameName = game:GetService("MarketplaceService"):GetProductInfo(placeId).Name
-    end)
-    
-    -- Prepare webhook data in the cleaner format you requested
     local webhookData = {
-        content = "<@" .. self.Config.PingUserID .. ">", -- Ping the user
-        embeds = {
-            {
-                title = "Script Execution",
-                color = 3447003, -- Blue color
-                description = "**Whitelist Status: " .. (isWhitelisted and "✅ Yes" or "❌ No") .. "**",
-                thumbnail = {
-                    url = thumbnailUrl
-                },
-                fields = {
-                    {
-                        name = "Username",
-                        value = username,
-                        inline = true
-                    },
-                    {
-                        name = "Display",
-                        value = displayName,
-                        inline = true
-                    },
-                    {
-                        name = "UserID",
-                        value = tostring(userId),
-                        inline = true
-                    },
-                    {
-                        name = "Game",
-                        value = gameName,
-                        inline = true
-                    },
-                    {
-                        name = "PlaceID",
-                        value = tostring(placeId),
-                        inline = true
-                    },
-                    {
-                        name = "Executor",
-                        value = executorName or "Unknown",
-                        inline = true
-                    }
-                },
-                footer = {
-                    text = "Whitelist System • " .. os.date("%Y-%m-%d %H:%M:%S")
-                }
-            },
-            {
-                title = "Whitelist Information",
-                color = 15844367, -- Gold color
-                description = "```" .. string.sub(whitelistString or "N/A", 1, 1000) .. "```",
-                timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-            }
-        }
+        content = message
     }
     
-    webhookDebugPrint("Webhook data prepared, attempting to send...")
-    
-    -- Try multiple HTTP request methods
     local success = false
     
     -- Method 1: http_request
@@ -525,13 +106,186 @@ function WebhookSystem:SendToWebhook(isWhitelisted, whitelistString, executorNam
         end)
     end
     
-    if success then
-        webhookDebugPrint("Successfully sent webhook data!")
+    return success
+end
+
+-- Send data to webhook step by step
+function WebhookSystem:SendToWebhook(isWhitelisted, whitelistString, executorName)
+    webhookDebugPrint("Starting step-by-step webhook process...")
+    
+    -- Get player information
+    local player = game:GetService("Players").LocalPlayer
+    local userId = player.UserId
+    local username = player.Name
+    local displayName = player.DisplayName
+    
+    -- Get game information
+    local gameName = "Unknown Game"
+    local placeId = game.PlaceId
+    
+    pcall(function()
+        gameName = game:GetService("MarketplaceService"):GetProductInfo(placeId).Name
+    end)
+    
+    -- Step 1: Send a test message
+    if self:SendSimpleMessage("Whitelist System Test Message") then
+        webhookDebugPrint("Test message sent successfully!")
     else
-        webhookDebugPrint("Failed to send webhook data after trying all methods.")
+        webhookDebugPrint("Failed to send test message, webhook may be invalid")
+        return false
     end
     
-    return success
+    -- Step 2: Send username
+    if self:SendSimpleMessage("Username: " .. username) then
+        webhookDebugPrint("Username sent successfully!")
+    else
+        webhookDebugPrint("Failed to send username")
+        return false
+    end
+    
+    -- Step 3: Send display name
+    if self:SendSimpleMessage("Display Name: " .. displayName) then
+        webhookDebugPrint("Display name sent successfully!")
+    else
+        webhookDebugPrint("Failed to send display name")
+        return false
+    end
+    
+    -- Step 4: Send user ID
+    if self:SendSimpleMessage("User ID: " .. userId) then
+        webhookDebugPrint("User ID sent successfully!")
+    else
+        webhookDebugPrint("Failed to send user ID")
+        return false
+    end
+    
+    -- Step 5: Send game info
+    if self:SendSimpleMessage("Game: " .. gameName .. " (Place ID: " .. placeId .. ")") then
+        webhookDebugPrint("Game info sent successfully!")
+    else
+        webhookDebugPrint("Failed to send game info")
+        return false
+    end
+    
+    -- Step 6: Send executor name
+    if self:SendSimpleMessage("Executor: " .. (executorName or "Unknown")) then
+        webhookDebugPrint("Executor name sent successfully!")
+    else
+        webhookDebugPrint("Failed to send executor name")
+        return false
+    end
+    
+    -- Step 7: Send whitelist status
+    if self:SendSimpleMessage("Whitelisted: " .. (isWhitelisted and "Yes" or "No")) then
+        webhookDebugPrint("Whitelist status sent successfully!")
+    else
+        webhookDebugPrint("Failed to send whitelist status")
+        return false
+    end
+    
+    -- Step 8: Try to ping user
+    if self:SendSimpleMessage("<@" .. self.Config.PingUserID .. ">") then
+        webhookDebugPrint("User ping sent successfully!")
+    else
+        webhookDebugPrint("Failed to send user ping")
+        -- Continue anyway
+    end
+    
+    -- Step 9: Try to send a small portion of the whitelist string
+    local shortWhitelistString = string.sub(whitelistString or "N/A", 1, 100) .. "..."
+    if self:SendSimpleMessage("Whitelist String (Partial): " .. shortWhitelistString) then
+        webhookDebugPrint("Partial whitelist string sent successfully!")
+    else
+        webhookDebugPrint("Failed to send partial whitelist string")
+        -- Continue anyway
+    end
+    
+    -- Step 10: Try to send a final summary with embed
+    local webhookData = {
+        content = "Whitelist Check Summary",
+        embeds = {
+            {
+                title = "Script Execution Summary",
+                description = "User: " .. username .. "\nWhitelisted: " .. (isWhitelisted and "Yes" or "No"),
+                color = isWhitelisted and 65280 or 16711680 -- Green if whitelisted, red if not
+            }
+        }
+    }
+    
+    local success = false
+    
+    -- Try the most reliable method based on previous steps
+    if http_request then
+        pcall(function()
+            local response = http_request({
+                Url = self.Config.WebhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = game:GetService("HttpService"):JSONEncode(webhookData)
+            })
+            
+            if response.StatusCode == 200 or response.StatusCode == 204 then
+                success = true
+            end
+        end)
+    elseif syn and syn.request then
+        pcall(function()
+            local response = syn.request({
+                Url = self.Config.WebhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = game:GetService("HttpService"):JSONEncode(webhookData)
+            })
+            
+            if response.StatusCode == 200 or response.StatusCode == 204 then
+                success = true
+            end
+        end)
+    elseif request then
+        pcall(function()
+            local response = request({
+                Url = self.Config.WebhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = game:GetService("HttpService"):JSONEncode(webhookData)
+            })
+            
+            if response.StatusCode == 200 or response.StatusCode == 204 then
+                success = true
+            end
+        end)
+    else
+        pcall(function()
+            local HttpService = game:GetService("HttpService")
+            local response = HttpService:RequestAsync({
+                Url = self.Config.WebhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = HttpService:JSONEncode(webhookData)
+            })
+            
+            if response.StatusCode == 200 or response.StatusCode == 204 then
+                success = true
+            end
+        end)
+    end
+    
+    if success then
+        webhookDebugPrint("Summary sent successfully!")
+    else
+        webhookDebugPrint("Failed to send summary")
+    end
+    
+    webhookDebugPrint("Step-by-step webhook process completed!")
+    return true
 end
 
 -- Main function to run both systems
@@ -541,22 +295,9 @@ local function RunWhitelistWithWebhook()
     -- Initialize whitelist system
     local isWhitelisted, whitelistString, executorName = WhitelistSystem:Initialize()
     
-    -- Send webhook notification with the cleaner format
+    -- Send webhook notification step by step
     WebhookSystem:SendToWebhook(isWhitelisted, whitelistString, executorName)
     
     -- Return whitelist result
     return isWhitelisted
 end
-
--- Run the combined system
-local isWhitelisted = RunWhitelistWithWebhook()
-
--- Continue with your script if whitelisted
-if isWhitelisted then
-    print("Access granted! User is whitelisted.")
-    -- Your script code here
-else
-    print("Access denied! User is not whitelisted.")
-end
-
-return isWhitelisted
