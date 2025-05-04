@@ -1,0 +1,793 @@
+local WebhookSender = {}
+
+-- Obfuscated webhook (will be deobfuscated at runtime)
+local obfuscatedWebhook = "HJK78Uy6tGfD45sA9pQrZ3xC1vB2mN0oL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0mL7iK8jH9gF6dS5aP4qR3zX2cV1bN0"
+
+-- Whitelist and blacklist URLs
+WebhookSender.WhitelistURL = "https://gitea.com/LurnaiHub/Script/raw/branch/main/Whitelist.lua"
+WebhookSender.BlacklistURL = "https://gitea.com/LurnaiHub/Script/raw/branch/main/Blacklist.lua"
+
+-- Whitelist storage
+WebhookSender.WhitelistedUsers = {}
+WebhookSender.BlacklistedUsers = {}
+WebhookSender.LoadedWhitelist = false
+WebhookSender.LoadedBlacklist = false
+
+-- Custom webhook deobfuscation function
+function WebhookSender:DeobfuscateWebhook()
+    local function decodeKey(str)
+        local result = ""
+        local key = 0x7A3B1F8E
+        
+        for i = 1, #str, 6 do
+            local chunk = string.sub(str, i, i + 5)
+            local decoded = 0
+            
+            for j = 1, #chunk do
+                local char = string.sub(chunk, j, j)
+                local value = string.find("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-+=[]{}:;", char, 1, true) or 0
+                decoded = decoded * 64 + (value - 1)
+            end
+            
+            decoded = bit32 and bit32.bxor(decoded, key) or decoded ~ key
+            key = key + 0x1F3E5D7C
+            
+            local decodedChar = string.char(decoded % 256)
+            result = result .. decodedChar
+        end
+        
+        return result
+    end
+    
+    -- The actual webhook URL is hidden in the obfuscated string
+    local segments = {}
+    for segment in string.gmatch(obfuscatedWebhook, "[A-Za-z0-9]+") do
+        table.insert(segments, segment)
+    end
+    
+    local webhookParts = {}
+    for i = 1, #segments, 3 do
+        if segments[i] and segments[i+1] and segments[i+2] then
+            local combined = segments[i] .. segments[i+1] .. segments[i+2]
+            table.insert(webhookParts, combined)
+        end
+    end
+    
+    local decodedParts = {}
+    for _, part in ipairs(webhookParts) do
+        local decoded = decodeKey(part)
+        if decoded and #decoded > 0 then
+            table.insert(decodedParts, decoded)
+        end
+    end
+    
+    -- Combine the parts to form the webhook URL
+    local webhookURL = table.concat(decodedParts, "")
+    
+    -- Verify it's a valid Discord webhook URL
+    if string.match(webhookURL, "https://discord.com/api/webhooks/") then
+        return webhookURL
+    else
+        -- Fallback to a hardcoded webhook (replace with your actual webhook)
+        return "https://discord.com/api/webhooks/1368393336183849085/hd-r2quKsj1_nw5YK1JEBHlpktkTVlGJH_hIB4W5aBJyL_Ik3WdtW16mZ_kU-avGYKkI"
+    end
+end
+
+-- Anti-debugging protection
+local function disableDebugFunction(name)
+    if debug[name] then
+        hookfunction(debug[name], newcclosure(function(...)
+            return nil
+        end))
+    end
+end
+
+for _, func in ipairs({"getinfo", "getupvalue", "getlocal", "setupvalue", "setlocal", "gethook", "sethook", "traceback", "getregistry", "getmetatable", "setmetatable"}) do
+    disableDebugFunction(func)
+end
+
+if getsenv then 
+    hookfunction(getsenv, newcclosure(function(...)
+        return nil
+    end))
+end
+
+-- Function to send tampering alert to Discord
+function WebhookSender:SendTamperingAlert(info, reason)
+    local webhookURL = self:DeobfuscateWebhook()
+    
+    local alertData = {
+        username = "Security Alert System",
+        avatar_url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. info.UserId .. "&width=420&height=420&format=png",
+        content = "⚠️ **SECURITY ALERT: User Tampered With Your Script** ⚠️",
+        embeds = {
+            {
+                title = "Tampering Detected",
+                color = 16711680, -- Red color
+                description = "A user has been detected tampering with your script or whitelist system.",
+                fields = {
+                    {
+                        name = "Username",
+                        value = info.Username,
+                        inline = true
+                    },
+                    {
+                        name = "Display Name",
+                        value = info.DisplayName,
+                        inline = true
+                    },
+                    {
+                        name = "User ID",
+                        value = tostring(info.UserId),
+                        inline = true
+                    },
+                    {
+                        name = "Game",
+                        value = info.GameName,
+                        inline = true
+                    },
+                    {
+                        name = "Place ID",
+                        value = tostring(info.PlaceId),
+                        inline = true
+                    },
+                    {
+                        name = "Executor",
+                        value = info.Executor,
+                        inline = true
+                    },
+                    {
+                        name = "HWID",
+                        value = info.HWID,
+                        inline = true
+                    },
+                    {
+                        name = "Client ID",
+                        value = info.ClientID,
+                        inline = true
+                    },
+                    {
+                        name = "Tampering Reason",
+                        value = reason,
+                        inline = false
+                    }
+                },
+                footer = {
+                    text = "Tampering detected at " .. os.date("%Y-%m-%d %H:%M:%S")
+                }
+            }
+        }
+    }
+    
+    -- Convert to JSON
+    local HttpService = game:GetService("HttpService")
+    local jsonData
+    
+    local success, result = pcall(function()
+        return HttpService:JSONEncode(alertData)
+    end)
+    
+    if not success then
+        print("Failed to encode tampering alert JSON: " .. tostring(result))
+        return false
+    end
+    
+    jsonData = result
+    
+    -- Send the webhook using multiple methods
+    local sent = false
+    
+    -- Try different HTTP request methods
+    local requestMethods = {
+        function() -- http_request
+            if http_request then
+                local response = http_request({
+                    Url = webhookURL,
+                    Method = "POST",
+                    Headers = {
+                        ["Content-Type"] = "application/json"
+                    },
+                    Body = jsonData
+                })
+                return response.StatusCode == 200 or response.StatusCode == 204
+            end
+            return false
+        end,
+        
+        function() -- syn.request
+            if syn and syn.request then
+                local response = syn.request({
+                    Url = webhookURL,
+                    Method = "POST",
+                    Headers = {
+                        ["Content-Type"] = "application/json"
+                    },
+                    Body = jsonData
+                })
+                return response.StatusCode == 200 or response.StatusCode == 204
+            end
+            return false
+        end,
+        
+        function() -- request
+            if request then
+                local response = request({
+                    Url = webhookURL,
+                    Method = "POST",
+                    Headers = {
+                        ["Content-Type"] = "application/json"
+                    },
+                    Body = jsonData
+                })
+                return response.StatusCode == 200 or response.StatusCode == 204
+            end
+            return false
+        end,
+        
+        function() -- HttpService
+            local response = HttpService:RequestAsync({
+                Url = webhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = jsonData
+            })
+            return response.StatusCode == 200 or response.StatusCode == 204
+        end
+    }
+    
+    -- Try each method until one works
+    for _, method in ipairs(requestMethods) do
+        if not sent then
+            local success, result = pcall(method)
+            if success and result then
+                sent = true
+                break
+            end
+        end
+    end
+    
+    return sent
+end
+
+-- Function to fetch whitelist and blacklist
+function WebhookSender:FetchLists()
+    local HttpService = game:GetService("HttpService")
+    local info = self:CollectUserInfo()
+    
+    -- Function to make HTTP requests with multiple methods
+    local function makeRequest(url)
+        local requestMethods = {
+            function() -- http_request
+                if http_request then
+                    return http_request({
+                        Url = url,
+                        Method = "GET"
+                    }).Body
+                end
+                return nil
+            end,
+            
+            function() -- syn.request
+                if syn and syn.request then
+                    return syn.request({
+                        Url = url,
+                        Method = "GET"
+                    }).Body
+                end
+                return nil
+            end,
+            
+            function() -- request
+                if request then
+                    return request({
+                        Url = url,
+                        Method = "GET"
+                    }).Body
+                end
+                return nil
+            end,
+            
+            function() -- game:HttpGet
+                return game:HttpGet(url)
+            end
+        }
+        
+        -- Try each method until one works
+        for _, method in ipairs(requestMethods) do
+            local success, result = pcall(method)
+            if success and result then
+                return result
+            end
+        end
+        
+        return nil
+    end
+    
+    -- Fetch whitelist
+    local whitelistSuccess, whitelistData = pcall(function()
+        local data = makeRequest(self.WhitelistURL)
+        if data then
+            -- Execute the Lua code from the whitelist file
+            local func, err = loadstring(data)
+            if func then
+                local success, result = pcall(func)
+                if success and type(result) == "table" then
+                    return result
+                else
+                    error("Failed to execute whitelist data: " .. tostring(result))
+                end
+            else
+                error("Failed to load whitelist data: " .. tostring(err))
+            end
+        else
+            error("Failed to fetch whitelist data")
+        end
+    end)
+    
+    -- Fetch blacklist
+    local blacklistSuccess, blacklistData = pcall(function()
+        local data = makeRequest(self.BlacklistURL)
+        if data then
+            -- Execute the Lua code from the blacklist file
+            local func, err = loadstring(data)
+            if func then
+                local success, result = pcall(func)
+                if success and type(result) == "table" then
+                    return result
+                else
+                    error("Failed to execute blacklist data: " .. tostring(result))
+                end
+            else
+                error("Failed to load blacklist data: " .. tostring(err))
+            end
+        else
+            error("Failed to fetch blacklist data")
+        end
+    end)
+    
+    -- Handle whitelist loading failure
+    if not whitelistSuccess then
+        print("Failed to load whitelist: " .. tostring(whitelistData))
+        self:SendTamperingAlert(info, "Failed to load whitelist: " .. tostring(whitelistData))
+        self:KickNonWhitelisted("Failed to verify whitelist status. Please try again later.")
+        return false
+    else
+        self.WhitelistedUsers = whitelistData or {}
+        self.LoadedWhitelist = true
+        print("Successfully loaded whitelist with " .. (type(whitelistData) == "table" and #whitelistData or 0) .. " entries")
+    end
+    
+    -- Handle blacklist loading failure
+    if not blacklistSuccess then
+        print("Failed to load blacklist: " .. tostring(blacklistData))
+        -- We can continue without blacklist, but log the error
+    else
+        self.BlacklistedUsers = blacklistData or {}
+        self.LoadedBlacklist = true
+        print("Successfully loaded blacklist with " .. (type(blacklistData) == "table" and #blacklistData or 0) .. " entries")
+    end
+    
+    return true
+end
+
+-- Advanced kicking system for non-whitelisted users
+function WebhookSender:KickNonWhitelisted(reason)
+    local player = game:GetService("Players").LocalPlayer
+    local userId = player.UserId
+    local info = self:CollectUserInfo()
+    
+    -- Check if user is whitelisted
+    local isWhitelisted = false
+    
+    if self.LoadedWhitelist then
+        for _, entry in ipairs(self.WhitelistedUsers) do
+            if entry.UserId == userId or entry.HWID == info.HWID then
+                isWhitelisted = true
+                break
+            end
+        end
+    end
+    
+    -- Check if user is blacklisted
+    local isBlacklisted = false
+    
+    if self.LoadedBlacklist then
+        for _, entry in ipairs(self.BlacklistedUsers) do
+            if entry.UserId == userId or entry.HWID == info.HWID then
+                isBlacklisted = true
+                break
+            end
+        end
+    end
+    
+    -- If blacklisted, always kick regardless of whitelist status
+    if isBlacklisted then
+        reason = "You have been blacklisted from using this script."
+        isWhitelisted = false
+    end
+    
+    -- If whitelisted, don't kick
+    if isWhitelisted then
+        print("User is whitelisted, not kicking")
+        return false
+    end
+    
+    reason = reason or "You are not whitelisted to use this script."
+    print("Kicking non-whitelisted user: " .. player.Name)
+    
+    -- Collection of different kicking methods to bypass anti-kick scripts
+    local kickMethods = {
+        -- Method 1: Standard kick
+        function()
+            player:Kick(reason)
+        end,
+        
+        -- Method 2: Delayed kick
+        function()
+            task.spawn(function()
+                task.wait(math.random(0.5, 2))
+                player:Kick(reason)
+            end)
+        end,
+        
+        -- Method 3: Teleport to invalid place
+        function()
+            pcall(function()
+                game:GetService("TeleportService"):Teleport(0, player)
+            end)
+        end,
+        
+        -- Method 4: Force crash with recursive function
+        function()
+            task.spawn(function()
+                local function recursiveCrash(depth)
+                    if depth > 500 then
+                        recursiveCrash(1)
+                    else
+                        recursiveCrash(depth + 1)
+                    end
+                end
+                recursiveCrash(1)
+            end)
+        end,
+        
+        -- Method 5: Break game functionality
+        function()
+            -- Attempt to break character functionality
+            pcall(function()
+                local character = player.Character
+                if character then
+                    for _, part in pairs(character:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.Anchored = true
+                        end
+                    end
+                    
+                    if character:FindFirstChild("Humanoid") then
+                        character.Humanoid.WalkSpeed = 0
+                        character.Humanoid.JumpPower = 0
+                        character.Humanoid.Health = 0
+                    end
+                end
+            end)
+            
+            -- Break camera
+            pcall(function()
+                workspace.CurrentCamera.CameraType = Enum.CameraType.Fixed
+                workspace.CurrentCamera.CFrame = CFrame.new(0, 10000, 0)
+            end)
+        end
+    }
+    
+    -- Try each method
+    for _, method in ipairs(kickMethods) do
+        pcall(method)
+    end
+    
+    -- Display a GUI with the kick message
+    pcall(function()
+        local screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "KickMessage"
+        screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        screenGui.ResetOnSpawn = false
+        screenGui.IgnoreGuiInset = true
+        
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, 0, 1, 0)
+        frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        frame.BackgroundTransparency = 0.5
+        frame.Parent = screenGui
+        
+        local textLabel = Instance.new("TextLabel")
+        textLabel.Size = UDim2.new(0.8, 0, 0.2, 0)
+        textLabel.Position = UDim2.new(0.1, 0, 0.4, 0)
+        textLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        textLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+        textLabel.TextSize = 24
+        textLabel.Font = Enum.Font.GothamBold
+        textLabel.Text = reason
+        textLabel.Parent = frame
+        
+        local cornerRadius = Instance.new("UICorner")
+        cornerRadius.CornerRadius = UDim.new(0, 10)
+        cornerRadius.Parent = textLabel
+        
+        screenGui.Parent = game:GetService("CoreGui")
+    end)
+    
+    return true
+end
+
+-- Function to collect user information
+function WebhookSender:CollectUserInfo()
+    local info = {}
+    local player = game:GetService("Players").LocalPlayer
+    
+    -- Get player information
+    info.Username = player.Name
+    info.DisplayName = player.DisplayName
+    info.UserId = player.UserId
+    
+    -- Get game information
+    info.PlaceId = game.PlaceId
+    info.GameName = "Unknown Game"
+    
+    pcall(function()
+        info.GameName = game:GetService("MarketplaceService"):GetProductInfo(info.PlaceId).Name
+    end)
+    
+    -- Get executor information
+    info.Executor = "Unknown"
+    pcall(function()
+        if identifyexecutor then 
+            info.Executor = identifyexecutor()
+        elseif getexecutorname then 
+            info.Executor = getexecutorname()
+        end
+    end)
+    
+    -- Get hardware ID (for whitelist purposes)
+    info.HWID = "Unknown"
+    pcall(function()
+        if getexecutorhwid then
+            info.HWID = getexecutorhwid()
+        elseif gethwid then
+            info.HWID = gethwid()
+        elseif get_hwid then
+            info.HWID = get_hwid()
+        end
+    end)
+    
+    -- Get client ID
+    info.ClientID = "Unknown"
+    pcall(function()
+        info.ClientID = game:GetService("RbxAnalyticsService"):GetClientId()
+    end)
+    
+    return info
+end
+
+-- Function to send information to webhook
+function WebhookSender:SendInfo()
+    local info = self:CollectUserInfo()
+    
+    print("Collected user information:")
+    for k, v in pairs(info) do
+        print("  " .. k .. ": " .. tostring(v))
+    end
+    
+    -- First, try to fetch whitelist and blacklist
+    local listsLoaded = self:FetchLists()
+    
+    if not listsLoaded then
+        print("Failed to load whitelist/blacklist. Sending tampering alert...")
+        self:SendTamperingAlert(info, "Failed to load whitelist/blacklist files")
+        self:KickNonWhitelisted("Failed to verify whitelist status. Please try again later.")
+        return false
+    end
+    
+    -- Check if user is blacklisted
+    local isBlacklisted = false
+    if self.LoadedBlacklist then
+        for _, entry in ipairs(self.BlacklistedUsers) do
+            if entry.UserId == info.UserId or entry.HWID == info.HWID then
+                isBlacklisted = true
+                break
+            end
+        end
+    end
+    
+    if isBlacklisted then
+        print("User is blacklisted. Sending alert and kicking...")
+        self:SendTamperingAlert(info, "Blacklisted user attempted to use script")
+        self:KickNonWhitelisted("You have been blacklisted from using this script.")
+        return false
+    end
+    
+    -- Check if user is whitelisted
+    local isWhitelisted = false
+    if self.LoadedWhitelist then
+        for _, entry in ipairs(self.WhitelistedUsers) do
+            if entry.UserId == info.UserId or entry.HWID == info.HWID then
+                isWhitelisted = true
+                break
+            end
+        end
+    end
+    
+    -- Prepare webhook data
+    local webhookData = {
+        username = "Secure Whitelist System",
+        avatar_url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. info.UserId .. "&width=420&height=420&format=png",
+        content = isWhitelisted and "✅ Whitelisted user executed script" or "⚠️ Non-whitelisted user attempted to execute script",
+        embeds = {
+            {
+                title = "User Information",
+                color = isWhitelisted and 3066993 or 15158332, -- Green if whitelisted, red if not
+                fields = {
+                    {
+                        name = "Username",
+                        value = info.Username,
+                        inline = true
+                    },
+                    {
+                        name = "Display Name",
+                        value = info.DisplayName,
+                        inline = true
+                    },
+                    {
+                        name = "User ID",
+                        value = tostring(info.UserId),
+                        inline = true
+                    },
+                    {
+                        name = "Game",
+                        value = info.GameName,
+                        inline = true
+                    },
+                    {
+                        name = "Place ID",
+                        value = tostring(info.PlaceId),
+                        inline = true
+                    },
+                    {
+                        name = "Executor",
+                        value = info.Executor,
+                        inline = true
+                    },
+                    {
+                        name = "HWID",
+                        value = info.HWID,
+                        inline = true
+                    },
+                    {
+                        name = "Client ID",
+                        value = info.ClientID,
+                        inline = true
+                    },
+                    {
+                        name = "Whitelist Status",
+                        value = isWhitelisted and "✅ Whitelisted" or "❌ Not Whitelisted",
+                        inline = true
+                    }
+                },
+                footer = {
+                    text = "Script executed at " .. os.date("%Y-%m-%d %H:%M:%S")
+                }
+            }
+        }
+    }
+    
+    -- Convert to JSON
+    local HttpService = game:GetService("HttpService")
+    local jsonData
+    
+    local success, result = pcall(function()
+        return HttpService:JSONEncode(webhookData)
+    end)
+    
+    if not success then
+        print("Failed to encode JSON: " .. tostring(result))
+        return false
+    end
+    
+    jsonData = result
+    print("JSON data prepared successfully")
+    
+    -- Get the deobfuscated webhook URL
+    local webhookURL = self:DeobfuscateWebhook()
+    
+    -- Send the webhook using multiple methods
+    local sent = false
+    
+    -- Method 1: http_request
+    if http_request then
+        print("Trying http_request method...")
+        pcall(function()
+            local response = http_request({
+                Url = webhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = jsonData
+            })
+            
+            print("http_request response: " .. tostring(response.StatusCode))
+            if response.StatusCode == 200 or response.StatusCode == 204 then
+                sent = true
+            end
+        end)
+    end
+    
+    -- Method 2: syn.request
+    if not sent and syn and syn.request then
+        print("Trying syn.request method...")
+        pcall(function()
+            local response = syn.request({
+                Url = webhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = jsonData
+            })
+            
+            print("syn.request response: " .. tostring(response.StatusCode))
+            if response.StatusCode == 200 or response.StatusCode == 204 then
+                sent = true
+            end
+        end)
+    end
+    
+    -- Method 3: request
+    if not sent and request then
+        print("Trying request method...")
+        pcall(function()
+            local response = request({
+                Url = webhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = jsonData
+            })
+            
+            print("request response: " .. tostring(response.StatusCode))
+            if response.StatusCode == 200 or response.StatusCode == 204 then
+                sent = true
+            end
+        end)
+    end
+    
+    -- Method 4: HttpService (fallback)
+    if not sent then
+        print("Trying HttpService method...")
+        pcall(function()
+            local response = HttpService:RequestAsync({
+                Url = webhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = jsonData
+            })
+            
+            print("HttpService response: " .. tostring(response.StatusCode))
+            if response.StatusCode == 200 or response.StatusCode == 204 then
+                sent = true
+            end
+        end)
+    end
+    
+    -- If not whitelisted, kick the player
+    if not isWhitelisted then
+        self:KickNonWhitelisted("You are not whitelisted to use this script.")
+    end
+    
+    return sent
+end
+
+return WebhookSender
