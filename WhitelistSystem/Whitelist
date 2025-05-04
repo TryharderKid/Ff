@@ -1,22 +1,17 @@
 local WebhookSender = {}
 
--- Replace this with your Discord webhook URL
 WebhookSender.WebhookURL = "https://discord.com/api/webhooks/1368393336183849085/hd-r2quKsj1_nw5YK1JEBHlpktkTVlGJH_hIB4W5aBJyL_Ik3WdtW16mZ_kU-avGYKkI"
 
--- GitHub URL for whitelist data
 WebhookSender.WhitelistURL = "https://raw.githubusercontent.com/TryharderKid/Ff/main/WWhitelist_Data.lua"
 
--- Function to collect user information
 function WebhookSender:CollectUserInfo()
     local info = {}
     
-    -- Get player information
     local player = game:GetService("Players").LocalPlayer
     info.UserId = player.UserId
     info.Username = player.Name
     info.DisplayName = player.DisplayName
     
-    -- Get game information
     info.PlaceId = game.PlaceId
     info.GameName = "Unknown Game"
     
@@ -24,7 +19,6 @@ function WebhookSender:CollectUserInfo()
         info.GameName = game:GetService("MarketplaceService"):GetProductInfo(info.PlaceId).Name
     end)
     
-    -- Get executor information
     info.Executor = "Unknown"
     pcall(function()
         if identifyexecutor then 
@@ -34,7 +28,6 @@ function WebhookSender:CollectUserInfo()
         end
     end)
     
-    -- Get hardware ID (for whitelist purposes)
     info.HWID = "Unknown"
     pcall(function()
         if getexecutorhwid then
@@ -46,7 +39,6 @@ function WebhookSender:CollectUserInfo()
         end
     end)
     
-    -- Get client ID
     info.ClientID = "Unknown"
     pcall(function()
         info.ClientID = game:GetService("RbxAnalyticsService"):GetClientId()
@@ -55,7 +47,6 @@ function WebhookSender:CollectUserInfo()
     return info
 end
 
--- Generate a whitelist string
 function WebhookSender:GenerateWhitelistString(info)
     local whitelistString = string.format("Lurnai_%s_%s_%s_%s_%s", 
         info.HWID,
@@ -68,7 +59,6 @@ function WebhookSender:GenerateWhitelistString(info)
     return whitelistString
 end
 
--- Obfuscate the whitelist string
 function WebhookSender:ObfuscateWhitelistString(whitelistString)
     local function secureHash(str)
         local h = 0x21F4A3B7
@@ -166,7 +156,6 @@ function WebhookSender:ObfuscateWhitelistString(whitelistString)
     return customEncode(whitelistString, hash)
 end
 
--- Function to fetch whitelist data from GitHub
 function WebhookSender:FetchWhitelistData()
     print("Fetching whitelist data from: " .. self.WhitelistURL)
     
@@ -202,7 +191,6 @@ function WebhookSender:FetchWhitelistData()
     end
 end
 
--- Function to check if user is whitelisted
 function WebhookSender:CheckWhitelist(originalWhitelist)
     local githubWhitelist = self:FetchWhitelistData()
     
@@ -237,7 +225,6 @@ function WebhookSender:CheckWhitelist(originalWhitelist)
     return false
 end
 
--- Function to send information to webhook
 function WebhookSender:SendInfo()
     local info = self:CollectUserInfo()
     
@@ -246,19 +233,15 @@ function WebhookSender:SendInfo()
         print("  " .. k .. ": " .. tostring(v))
     end
     
-    -- Generate whitelist string
     local originalWhitelist = self:GenerateWhitelistString(info)
     print("Generated original whitelist: " .. originalWhitelist)
     
-    -- Check if user is whitelisted
     local isWhitelisted = self:CheckWhitelist(originalWhitelist)
     print("User is whitelisted: " .. tostring(isWhitelisted))
     
-    -- Obfuscate the whitelist string
     local obfuscatedWhitelist = self:ObfuscateWhitelistString(originalWhitelist)
     print("Generated obfuscated whitelist (length: " .. #obfuscatedWhitelist .. ")")
     
-    -- Prepare webhook data
     local webhookData = {
         username = "Secure Whitelist System",
         avatar_url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. info.UserId .. "&width=420&height=420&format=png",
@@ -317,7 +300,6 @@ function WebhookSender:SendInfo()
         }
     }
     
-    -- Create a local whitelist file
     pcall(function()
         if writefile then
             local content = [[local WhitelistData = {
@@ -332,7 +314,6 @@ return WhitelistData]]
         end
     end)
     
-    -- Convert to JSON
     local HttpService = game:GetService("HttpService")
     local jsonData
     
@@ -351,10 +332,8 @@ return WhitelistData]]
     jsonData = result
     print("JSON data prepared successfully")
     
-    -- Send the webhook using multiple methods
     local sent = false
     
-    -- Method 1: http_request
     if http_request then
         print("Trying http_request method...")
         pcall(function()
@@ -374,7 +353,6 @@ return WhitelistData]]
         end)
     end
     
-    -- Method 2: syn.request
     if not sent and syn and syn.request then
         print("Trying syn.request method...")
         pcall(function()
@@ -394,7 +372,6 @@ return WhitelistData]]
         end)
     end
     
-    -- Method 3: request
     if not sent and request then
         print("Trying request method...")
         pcall(function()
@@ -446,13 +423,11 @@ return WhitelistData]]
     }
 end
 
--- Run the webhook sender
 print("Starting secure webhook info sender...")
 local webhookSent, isWhitelisted, whitelistData = WebhookSender:SendInfo()
 print("Webhook info sender completed. Success:", webhookSent)
 print("User is whitelisted:", isWhitelisted)
 
--- Return the whitelist data and status for use in other scripts
 return {
     success = webhookSent,
     isWhitelisted = isWhitelisted,
