@@ -1,0 +1,51 @@
+What This Script Does
+Information Collection:
+
+Collects the user's Roblox username, display name, and user ID
+Gets their hardware ID (HWID) using various executor functions
+Retrieves their client ID from Roblox
+Identifies which executor they're using
+Gets information about the game they're playing
+Whitelist String Generation:
+
+Creates a unique identifier string in the format: Lurnai_[HWID]_[UserID]_[ClientID]_[Username]_[Executor]_[MachineID]_[PersitineID]
+This string serves as a unique identifier for each user
+Secure Obfuscation:
+
+Takes the whitelist string and applies a complex obfuscation algorithm
+Adds timestamps and verification data to prevent tampering
+Makes it much harder for users to fake or modify their whitelist data
+Discord Webhook:
+
+Sends all this information to your Discord webhook
+Formats it nicely with embeds showing user info and whitelist data
+Allows you to see who is trying to use your script
+Local File Creation:
+
+Creates a file called "Whitelist_System.lua" on the user's computer
+This file contains both the original and obfuscated whitelist strings
+Can be used by your main script to verify if the user is whitelisted
+How to Use This for Whitelisting
+This script is just the data collection part of a whitelist system. To actually whitelist users, you would:
+
+Collect Whitelist Data:
+
+Have users run this script
+It will send their information to your Discord webhook
+Create a Whitelist Database:
+
+Create a file (like the "Whitelist_Users.Lua" mentioned in your original script)
+Add the whitelist strings of approved users to this file
+Host this file on GitHub or another accessible location
+Implement Whitelist Checking:
+
+Your main script would:
+Generate the user's whitelist string
+Compare it to the list of approved whitelist strings
+Allow access only if the user's string is in the approved list
+Example Workflow
+User runs this script
+You receive their information in your Discord server
+If you decide to whitelist them, you add their whitelist string to your database
+When they run your main script, it checks if their string is in the database
+If it is, they get access; if not, they're blocked
