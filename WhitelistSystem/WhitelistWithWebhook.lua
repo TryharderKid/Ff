@@ -5,7 +5,7 @@ local WhitelistSystem = {}
 -- Configuration
 WhitelistSystem.Config = {
     LocalFile = "Whitelist_System.lua",
-    GitHubRawURL = "https://raw.githubusercontent.com/TryharderKid/Ff/main/WWhitelist_Data.lua",
+    GitHubRawURL = "https://raw.githubusercontent.com/TryharderKid/Ff/main/WhitelistSystem/Whitelist_Users.Lua",
     Debug = false
 }
 
@@ -522,7 +522,6 @@ local isWhitelisted = RunWhitelistWithWebhook()
 -- Continue with your script if whitelisted
 if isWhitelisted then
     print("Access granted! User is whitelisted.")
-    -- Your script code here
 else
     print("Access denied! User is not whitelisted.")
 end
