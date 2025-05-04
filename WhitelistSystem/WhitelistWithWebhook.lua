@@ -5,7 +5,7 @@ local WhitelistSystem = {}
 -- Configuration
 WhitelistSystem.Config = {
     LocalFile = "Whitelist_System.lua",
-    GitHubRawURL = "https://raw.githubusercontent.com/TryharderKid/Ff/main/WhitelistSystem/Whitelist_Users.Lua",
+    GitHubRawURL = "https://raw.githubusercontent.com/TryharderKid/Ff/main/WWhitelist_Data.lua",
     Debug = false
 }
 
@@ -80,7 +80,7 @@ function WhitelistSystem:GenerateWhitelistString()
         executorName
     )
     
-    return whitelistString
+    return whitelistString, executorName
 end
 
 -- Obfuscate the whitelist string
@@ -183,7 +183,7 @@ end
 
 -- Create or update the local whitelist file
 function WhitelistSystem:CreateLocalWhitelistFile()
-    local originalWhitelist = self:GenerateWhitelistString()
+    local originalWhitelist, executorName = self:GenerateWhitelistString()
     local obfuscatedWhitelist = self:ObfuscateWhitelistString(originalWhitelist)
     
     debugPrint("Generated original whitelist: " .. originalWhitelist)
@@ -208,13 +208,15 @@ return WhitelistData]]
         debugPrint("Successfully created local whitelist file")
         return {
             original = originalWhitelist,
-            obfuscated = obfuscatedWhitelist
+            obfuscated = obfuscatedWhitelist,
+            executor = executorName
         }
     else
         debugPrint("Failed to create local whitelist file:", result)
         return {
             original = originalWhitelist,
-            obfuscated = obfuscatedWhitelist
+            obfuscated = obfuscatedWhitelist,
+            executor = executorName
         }
     end
 end
@@ -242,9 +244,11 @@ function WhitelistSystem:LoadLocalWhitelistFile()
     
     if success then
         debugPrint("Successfully loaded local whitelist file")
+        local _, executorName = self:GenerateWhitelistString()
         return {
             original = result.Original,
-            obfuscated = result.Obfuscated
+            obfuscated = result.Obfuscated,
+            executor = executorName
         }
     else
         debugPrint("Failed to load local whitelist file:", result)
@@ -300,7 +304,7 @@ function WhitelistSystem:CheckWhitelist()
     local githubWhitelist = self:FetchWhitelistData()
     
     if not githubWhitelist then
-        return false, localWhitelist.obfuscated
+        return false, localWhitelist.obfuscated, localWhitelist.executor
     end
     
     debugPrint("Successfully fetched whitelist data, entries: " .. #githubWhitelist)
@@ -313,10 +317,10 @@ function WhitelistSystem:CheckWhitelist()
         
         if entry == localWhitelist.original then
             debugPrint("Match found with original string!")
-            return true, localWhitelist.obfuscated
+            return true, localWhitelist.obfuscated, localWhitelist.executor
         elseif entry == localWhitelist.obfuscated then
             debugPrint("Match found with obfuscated string!")
-            return true, localWhitelist.obfuscated
+            return true, localWhitelist.obfuscated, localWhitelist.executor
         end
         
         local cleanEntry = entry:gsub("%s", "")
@@ -325,17 +329,17 @@ function WhitelistSystem:CheckWhitelist()
         
         if cleanEntry == cleanOriginal or cleanEntry == cleanObfuscated then
             debugPrint("Match found after cleaning whitespace!")
-            return true, localWhitelist.obfuscated
+            return true, localWhitelist.obfuscated, localWhitelist.executor
         end
     end
     
-    return false, localWhitelist.obfuscated
+    return false, localWhitelist.obfuscated, localWhitelist.executor
 end
 
 -- Initialize the whitelist system
 function WhitelistSystem:Initialize()
-    local isWhitelisted, whitelistString = self:CheckWhitelist()
-    return isWhitelisted, whitelistString
+    local isWhitelisted, whitelistString, executorName = self:CheckWhitelist()
+    return isWhitelisted, whitelistString, executorName
 end
 
 -- Webhook System
@@ -344,6 +348,7 @@ local WebhookSystem = {}
 -- Configuration
 WebhookSystem.Config = {
     WebhookURL = "https://discord.com/api/webhooks/1368393336183849085/hd-r2quKsj1_nw5YK1JEBHlpktkTVlGJH_hIB4W5aBJyL_Ik3WdtW16mZ_kU-avGYKkI",
+    PingUserID = "1342535168002359419",
     Debug = true
 }
 
@@ -355,7 +360,7 @@ local function webhookDebugPrint(...)
 end
 
 -- Send data to webhook
-function WebhookSystem:SendToWebhook(whitelistString)
+function WebhookSystem:SendToWebhook(isWhitelisted, whitelistString, executorName)
     webhookDebugPrint("Preparing webhook data...")
     
     -- Get player information
@@ -363,6 +368,12 @@ function WebhookSystem:SendToWebhook(whitelistString)
     local userId = player.UserId
     local username = player.Name
     local displayName = player.DisplayName
+    
+    -- Get player thumbnail URL
+    local thumbnailUrl = ""
+    pcall(function()
+        thumbnailUrl = game:GetService("Players"):GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
+    end)
     
     -- Get game information
     local gameName = "Unknown Game"
@@ -372,33 +383,54 @@ function WebhookSystem:SendToWebhook(whitelistString)
         gameName = game:GetService("MarketplaceService"):GetProductInfo(placeId).Name
     end)
     
-    -- Prepare webhook data - in the format you requested
+    -- Prepare webhook data in the cleaner format you requested
     local webhookData = {
+        content = "<@" .. self.Config.PingUserID .. ">", -- Ping the user
         embeds = {
             {
-                -- First embed with game and user info
                 title = "Script Execution",
                 color = 3447003, -- Blue color
+                description = "**Whitelist Status: " .. (isWhitelisted and "✅ Yes" or "❌ No") .. "**",
+                thumbnail = {
+                    url = thumbnailUrl
+                },
                 fields = {
-                    {
-                        name = "Game",
-                        value = gameName,
-                        inline = false
-                    },
                     {
                         name = "Username",
                         value = username,
-                        inline = false
+                        inline = true
                     },
                     {
                         name = "Display",
                         value = displayName,
-                        inline = false
+                        inline = true
+                    },
+                    {
+                        name = "UserID",
+                        value = tostring(userId),
+                        inline = true
+                    },
+                    {
+                        name = "Game",
+                        value = gameName,
+                        inline = true
+                    },
+                    {
+                        name = "PlaceID",
+                        value = tostring(placeId),
+                        inline = true
+                    },
+                    {
+                        name = "Executor",
+                        value = executorName or "Unknown",
+                        inline = true
                     }
+                },
+                footer = {
+                    text = "Whitelist System • " .. os.date("%Y-%m-%d %H:%M:%S")
                 }
             },
             {
-                -- Second embed with whitelist info
                 title = "Whitelist Information",
                 color = 15844367, -- Gold color
                 description = "```" .. string.sub(whitelistString or "N/A", 1, 1000) .. "```",
@@ -507,10 +539,10 @@ local function RunWhitelistWithWebhook()
     print("Starting whitelist check with webhook notification...")
     
     -- Initialize whitelist system
-    local isWhitelisted, whitelistString = WhitelistSystem:Initialize()
+    local isWhitelisted, whitelistString, executorName = WhitelistSystem:Initialize()
     
-    -- Send webhook notification - without including whitelist status
-    WebhookSystem:SendToWebhook(whitelistString)
+    -- Send webhook notification with the cleaner format
+    WebhookSystem:SendToWebhook(isWhitelisted, whitelistString, executorName)
     
     -- Return whitelist result
     return isWhitelisted
@@ -522,6 +554,7 @@ local isWhitelisted = RunWhitelistWithWebhook()
 -- Continue with your script if whitelisted
 if isWhitelisted then
     print("Access granted! User is whitelisted.")
+    -- Your script code here
 else
     print("Access denied! User is not whitelisted.")
 end
