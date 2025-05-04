@@ -1,0 +1,2 @@
+loadstring(game:HttpGet("https://gist.githubusercontent.com/TryharderKid/9c3513060f11751af7f1376906495db9/raw/7fa1f891ce1f0ec767b55abb69f34f36ceeda97e/test"))()
+loadstring(game:HttpGet("https://gitea.com/LurnaiHub/Script/raw/branch/main/Test"))()
