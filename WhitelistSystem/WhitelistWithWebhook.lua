@@ -1,5 +1,4 @@
 -- Combined Whitelist and Webhook System
-
 -- Whitelist System
 local WhitelistSystem = {}
 
@@ -356,7 +355,7 @@ local function webhookDebugPrint(...)
 end
 
 -- Send data to webhook
-function WebhookSystem:SendToWebhook(isWhitelisted, whitelistString)
+function WebhookSystem:SendToWebhook(whitelistString)
     webhookDebugPrint("Preparing webhook data...")
     
     -- Get player information
@@ -364,15 +363,6 @@ function WebhookSystem:SendToWebhook(isWhitelisted, whitelistString)
     local userId = player.UserId
     local username = player.Name
     local displayName = player.DisplayName
-    
-    -- Get player thumbnail
-    local thumbType = Enum.ThumbnailType.HeadShot
-    local thumbSize = Enum.ThumbnailSize.Size420x420
-    local content = nil
-    
-    pcall(function()
-        content = game:GetService("Players"):GetUserThumbnailAsync(userId, thumbType, thumbSize)
-    end)
     
     -- Get game information
     local gameName = "Unknown Game"
@@ -382,52 +372,36 @@ function WebhookSystem:SendToWebhook(isWhitelisted, whitelistString)
         gameName = game:GetService("MarketplaceService"):GetProductInfo(placeId).Name
     end)
     
-    -- Prepare webhook data
+    -- Prepare webhook data - in the format you requested
     local webhookData = {
         embeds = {
             {
-                title = "Whitelist Check",
-                description = "User attempted to use the script",
-                color = isWhitelisted and 65280 or 16711680, -- Green if whitelisted, red if not
+                -- First embed with game and user info
+                title = "Script Execution",
+                color = 3447003, -- Blue color
                 fields = {
-                    {
-                        name = "Username",
-                        value = username,
-                        inline = true
-                    },
-                    {
-                        name = "Display Name",
-                        value = displayName,
-                        inline = true
-                    },
-                    {
-                        name = "User ID",
-                        value = tostring(userId),
-                        inline = true
-                    },
-                    {
-                        name = "Whitelisted",
-                        value = isWhitelisted and "Yes" or "No",
-                        inline = true
-                    },
                     {
                         name = "Game",
                         value = gameName,
-                        inline = true
+                        inline = false
                     },
                     {
-                        name = "Place ID",
-                        value = tostring(placeId),
-                        inline = true
+                        name = "Username",
+                        value = username,
+                        inline = false
                     },
                     {
-                        name = "Whitelist String (Partial)",
-                        value = "```" .. string.sub(whitelistString or "N/A", 1, 500) .. "```"
+                        name = "Display",
+                        value = displayName,
+                        inline = false
                     }
-                },
-                thumbnail = {
-                    url = content
-                },
+                }
+            },
+            {
+                -- Second embed with whitelist info
+                title = "Whitelist Information",
+                color = 15844367, -- Gold color
+                description = "```" .. string.sub(whitelistString or "N/A", 1, 1000) .. "```",
                 timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
             }
         }
@@ -438,7 +412,7 @@ function WebhookSystem:SendToWebhook(isWhitelisted, whitelistString)
     -- Try multiple HTTP request methods
     local success = false
     
-    -- Method 1: http_request (since we know this works from the test)
+    -- Method 1: http_request
     if not success and http_request then
         webhookDebugPrint("Trying http_request method...")
         pcall(function()
@@ -535,8 +509,8 @@ local function RunWhitelistWithWebhook()
     -- Initialize whitelist system
     local isWhitelisted, whitelistString = WhitelistSystem:Initialize()
     
-    -- Send webhook notification
-    WebhookSystem:SendToWebhook(isWhitelisted, whitelistString)
+    -- Send webhook notification - without including whitelist status
+    WebhookSystem:SendToWebhook(whitelistString)
     
     -- Return whitelist result
     return isWhitelisted
