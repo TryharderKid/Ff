@@ -3,6 +3,9 @@ local WebhookSender = {}
 -- Replace this with your Discord webhook URL
 WebhookSender.WebhookURL = "https://discord.com/api/webhooks/1368393336183849085/hd-r2quKsj1_nw5YK1JEBHlpktkTVlGJH_hIB4W5aBJyL_Ik3WdtW16mZ_kU-avGYKkI"
 
+-- GitHub URL for whitelist data
+WebhookSender.WhitelistURL = "https://raw.githubusercontent.com/TryharderKid/Ff/main/WWhitelist_Data.lua"
+
 -- Function to collect user information
 function WebhookSender:CollectUserInfo()
     local info = {}
@@ -163,6 +166,77 @@ function WebhookSender:ObfuscateWhitelistString(whitelistString)
     return customEncode(whitelistString, hash)
 end
 
+-- Function to fetch whitelist data from GitHub
+function WebhookSender:FetchWhitelistData()
+    print("Fetching whitelist data from: " .. self.WhitelistURL)
+    
+    local success, result = pcall(function()
+        local response = game:HttpGet(self.WhitelistURL)
+        
+        print("Received response from GitHub")
+        
+        if response:match("return%s*{") then
+            local func, err = loadstring(response)
+            if func then
+                local whitelistData = func()
+                if type(whitelistData) == "table" then
+                    print("Successfully parsed whitelist data, entries: " .. #whitelistData)
+                    return whitelistData
+                else
+                    error("Whitelist data is not a table")
+                end
+            else
+                error("Failed to parse whitelist data: " .. tostring(err))
+            end
+        else
+            error("Invalid whitelist data format")
+        end
+    end)
+    
+    if success then
+        print("Successfully fetched whitelist data from GitHub")
+        return result
+    else
+        print("Failed to fetch whitelist data from GitHub:", result)
+        return nil
+    end
+end
+
+-- Function to check if user is whitelisted
+function WebhookSender:CheckWhitelist(originalWhitelist)
+    local githubWhitelist = self:FetchWhitelistData()
+    
+    if not githubWhitelist then
+        print("Could not fetch whitelist data, assuming not whitelisted")
+        return false
+    end
+    
+    print("Checking if user is whitelisted...")
+    print("Original whitelist string: " .. originalWhitelist)
+    
+    for i, entry in ipairs(githubWhitelist) do
+        entry = entry:gsub("^%s*(.-)%s*$", "%1")
+        
+        print("Checking entry #" .. i .. ": " .. string.sub(entry, 1, 30) .. "...")
+        
+        if entry == originalWhitelist then
+            print("Match found with original string!")
+            return true
+        end
+        
+        local cleanEntry = entry:gsub("%s", "")
+        local cleanOriginal = originalWhitelist:gsub("%s", "")
+        
+        if cleanEntry == cleanOriginal then
+            print("Match found after cleaning whitespace!")
+            return true
+        end
+    end
+    
+    print("No match found in whitelist data")
+    return false
+end
+
 -- Function to send information to webhook
 function WebhookSender:SendInfo()
     local info = self:CollectUserInfo()
@@ -176,6 +250,10 @@ function WebhookSender:SendInfo()
     local originalWhitelist = self:GenerateWhitelistString(info)
     print("Generated original whitelist: " .. originalWhitelist)
     
+    -- Check if user is whitelisted
+    local isWhitelisted = self:CheckWhitelist(originalWhitelist)
+    print("User is whitelisted: " .. tostring(isWhitelisted))
+    
     -- Obfuscate the whitelist string
     local obfuscatedWhitelist = self:ObfuscateWhitelistString(originalWhitelist)
     print("Generated obfuscated whitelist (length: " .. #obfuscatedWhitelist .. ")")
@@ -188,7 +266,8 @@ function WebhookSender:SendInfo()
         embeds = {
             {
                 title = "User Information",
-                color = 3447003, -- Blue color
+                color = isWhitelisted and 3066993 or 15158332, -- Green if whitelisted, red if not
+                description = "**Whitelist Status: " .. (isWhitelisted and "✅ WHITELISTED" or "❌ NOT WHITELISTED") .. "**",
                 fields = {
                     {
                         name = "Username",
@@ -232,7 +311,7 @@ function WebhookSender:SendInfo()
             },
             {
                 title = "Obfuscated Whitelist Data",
-                color = 15158332, -- Red color
+                color = 3447003, -- Blue color
                 description = "```" .. string.sub(obfuscatedWhitelist, 1, 1000) .. (string.len(obfuscatedWhitelist) > 1000 and "..." or "") .. "```"
             }
         }
@@ -241,10 +320,10 @@ function WebhookSender:SendInfo()
     -- Create a local whitelist file
     pcall(function()
         if writefile then
-            local content = [[
-local WhitelistData = {
+            local content = [[local WhitelistData = {
     Original = "]] .. originalWhitelist .. [[",
-    Obfuscated = "]] .. obfuscatedWhitelist .. [["
+    Obfuscated = "]] .. obfuscatedWhitelist .. [[",
+    IsWhitelisted = ]] .. tostring(isWhitelisted) .. [[
 }
 return WhitelistData]]
             
@@ -263,7 +342,10 @@ return WhitelistData]]
     
     if not success then
         print("Failed to encode JSON: " .. tostring(result))
-        return false
+        return false, isWhitelisted, {
+            original = originalWhitelist,
+            obfuscated = obfuscatedWhitelist
+        }
     end
     
     jsonData = result
@@ -354,26 +436,25 @@ return WhitelistData]]
     
     if sent then
         print("Successfully sent information to webhook!")
-        return true, {
-            original = originalWhitelist,
-            obfuscated = obfuscatedWhitelist
-        }
     else
         print("Failed to send information to webhook after trying all methods.")
-        return false, {
-            original = originalWhitelist,
-            obfuscated = obfuscatedWhitelist
-        }
     end
+    
+    return sent, isWhitelisted, {
+        original = originalWhitelist,
+        obfuscated = obfuscatedWhitelist
+    }
 end
 
 -- Run the webhook sender
 print("Starting secure webhook info sender...")
-local success, whitelistData = WebhookSender:SendInfo()
-print("Webhook info sender completed. Success:", success)
+local webhookSent, isWhitelisted, whitelistData = WebhookSender:SendInfo()
+print("Webhook info sender completed. Success:", webhookSent)
+print("User is whitelisted:", isWhitelisted)
 
--- Return the whitelist data for use in other scripts
+-- Return the whitelist data and status for use in other scripts
 return {
-    success = success,
+    success = webhookSent,
+    isWhitelisted = isWhitelisted,
     whitelistData = whitelistData
 }
