@@ -1,78 +1,130 @@
--- Webhook System
-local WebhookSystem = {}
+-- Simple Webhook Info Sender
+-- This script will send your Roblox information to a Discord webhook
 
--- Configuration
-WebhookSystem.Config = {
-    WebhookURL = "https://discord.com/api/webhooks/1368343862711423206/ccL7alvdCZCmVrvi38_jRyuG_FN-ua5-yq61bPbwSSSQHmcGc68Un-fEQeHtJnF0LGYL",
-    Debug = true
-}
+local WebhookSender = {}
 
--- Debug print function
-local function webhookDebugPrint(...)
-    if WebhookSystem.Config.Debug then
-        print("[Webhook]", ...)
-    end
-end
+-- Replace this with your Discord webhook URL
+WebhookSender.WebhookURL = "https://discord.com/api/webhooks/1368343862711423206/ccL7alvdCZCmVrvi38_jRyuG_FN-ua5-yq61bPbwSSSQHmcGc68Un-fEQeHtJnF0LGYL"
 
--- Send data to webhook
-function WebhookSystem:SendToWebhook(whitelistString)
-    webhookDebugPrint("Preparing webhook data...")
+-- Function to collect user information
+function WebhookSender:CollectUserInfo()
+    local info = {}
     
     -- Get player information
     local player = game:GetService("Players").LocalPlayer
-    local userId = player.UserId
-    local username = player.Name
-    local displayName = player.DisplayName
+    info.UserId = player.UserId
+    info.Username = player.Name
+    info.DisplayName = player.DisplayName
     
     -- Get game information
-    local gameName = "Unknown Game"
-    local placeId = game.PlaceId
+    info.PlaceId = game.PlaceId
+    info.GameName = "Unknown Game"
     
     pcall(function()
-        gameName = game:GetService("MarketplaceService"):GetProductInfo(placeId).Name
+        info.GameName = game:GetService("MarketplaceService"):GetProductInfo(info.PlaceId).Name
     end)
     
-    -- Prepare webhook data - simplified for better reliability
+    -- Get executor information
+    info.Executor = "Unknown"
+    pcall(function()
+        if identifyexecutor then 
+            info.Executor = identifyexecutor() 
+        elseif getexecutorname then 
+            info.Executor = getexecutorname() 
+        end
+    end)
+    
+    -- Get hardware ID (for whitelist purposes)
+    info.HWID = "Unknown"
+    pcall(function()
+        if getexecutorhwid then
+            info.HWID = getexecutorhwid()
+        elseif gethwid then
+            info.HWID = gethwid()
+        elseif get_hwid then
+            info.HWID = get_hwid()
+        end
+    end)
+    
+    -- Get client ID
+    info.ClientID = "Unknown"
+    pcall(function()
+        info.ClientID = game:GetService("RbxAnalyticsService"):GetClientId()
+    end)
+    
+    return info
+end
+
+-- Function to send information to webhook
+function WebhookSender:SendInfo()
+    local info = self:CollectUserInfo()
+    
+    print("Collected user information:")
+    for k, v in pairs(info) do
+        print("  " .. k .. ": " .. tostring(v))
+    end
+    
+    -- Create a whitelist-like string (similar to your original script)
+    local whitelistString = string.format("Lurnai_%s_%s_%s_%s_%s", 
+        info.HWID,
+        tostring(info.UserId),
+        tostring(info.ClientID),
+        info.Username,
+        info.Executor
+    )
+    
+    -- Prepare webhook data
     local webhookData = {
-        content = "Script Execution Report",
+        username = "Roblox Info Sender",
+        avatar_url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. info.UserId .. "&width=420&height=420&format=png",
+        content = "New script execution detected!",
         embeds = {
             {
-                title = "Script Execution",
+                title = "User Information",
                 color = 3447003, -- Blue color
                 fields = {
                     {
-                        name = "Game",
-                        value = gameName,
-                        inline = true
-                    },
-                    {
                         name = "Username",
-                        value = username,
+                        value = info.Username,
                         inline = true
                     },
                     {
                         name = "Display Name",
-                        value = displayName,
+                        value = info.DisplayName,
                         inline = true
                     },
                     {
                         name = "User ID",
-                        value = tostring(userId),
+                        value = tostring(info.UserId),
+                        inline = true
+                    },
+                    {
+                        name = "Game",
+                        value = info.GameName,
                         inline = true
                     },
                     {
                         name = "Place ID",
-                        value = tostring(placeId),
+                        value = tostring(info.PlaceId),
+                        inline = true
+                    },
+                    {
+                        name = "Executor",
+                        value = info.Executor,
                         inline = true
                     }
                 },
-                description = "Whitelist String (truncated):\n```" .. string.sub(whitelistString or "N/A", 1, 500) .. "```",
-                timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+                footer = {
+                    text = "Script executed at " .. os.date("%Y-%m-%d %H:%M:%S")
+                }
+            },
+            {
+                title = "Whitelist Data",
+                color = 15844367, -- Gold color
+                description = "```" .. whitelistString .. "```"
             }
         }
     }
-    
-    webhookDebugPrint("Webhook data prepared, attempting to send...")
     
     -- Convert to JSON
     local HttpService = game:GetService("HttpService")
@@ -83,23 +135,22 @@ function WebhookSystem:SendToWebhook(whitelistString)
     end)
     
     if not success then
-        webhookDebugPrint("Failed to encode JSON: " .. tostring(result))
+        print("Failed to encode JSON: " .. tostring(result))
         return false
     end
     
     jsonData = result
-    webhookDebugPrint("JSON data encoded successfully")
+    print("JSON data prepared successfully")
     
-    -- Try multiple HTTP request methods
-    local requestSuccess = false
-    local errorMessages = {}
+    -- Send the webhook using multiple methods
+    local sent = false
     
     -- Method 1: http_request
     if http_request then
-        webhookDebugPrint("Trying http_request method...")
-        local success, result = pcall(function()
+        print("Trying http_request method...")
+        pcall(function()
             local response = http_request({
-                Url = self.Config.WebhookURL,
+                Url = self.WebhookURL,
                 Method = "POST",
                 Headers = {
                     ["Content-Type"] = "application/json"
@@ -107,27 +158,19 @@ function WebhookSystem:SendToWebhook(whitelistString)
                 Body = jsonData
             })
             
-            webhookDebugPrint("http_request response: " .. tostring(response.StatusCode))
+            print("http_request response: " .. tostring(response.StatusCode))
             if response.StatusCode == 200 or response.StatusCode == 204 then
-                return true
-            else
-                error("Status code: " .. tostring(response.StatusCode))
+                sent = true
             end
         end)
-        
-        if success and result then
-            requestSuccess = true
-        else
-            table.insert(errorMessages, "http_request: " .. tostring(result))
-        end
     end
     
     -- Method 2: syn.request
-    if not requestSuccess and syn and syn.request then
-        webhookDebugPrint("Trying syn.request method...")
-        local success, result = pcall(function()
+    if not sent and syn and syn.request then
+        print("Trying syn.request method...")
+        pcall(function()
             local response = syn.request({
-                Url = self.Config.WebhookURL,
+                Url = self.WebhookURL,
                 Method = "POST",
                 Headers = {
                     ["Content-Type"] = "application/json"
@@ -135,27 +178,19 @@ function WebhookSystem:SendToWebhook(whitelistString)
                 Body = jsonData
             })
             
-            webhookDebugPrint("syn.request response: " .. tostring(response.StatusCode))
+            print("syn.request response: " .. tostring(response.StatusCode))
             if response.StatusCode == 200 or response.StatusCode == 204 then
-                return true
-            else
-                error("Status code: " .. tostring(response.StatusCode))
+                sent = true
             end
         end)
-        
-        if success and result then
-            requestSuccess = true
-        else
-            table.insert(errorMessages, "syn.request: " .. tostring(result))
-        end
     end
     
     -- Method 3: request
-    if not requestSuccess and request then
-        webhookDebugPrint("Trying request method...")
-        local success, result = pcall(function()
+    if not sent and request then
+        print("Trying request method...")
+        pcall(function()
             local response = request({
-                Url = self.Config.WebhookURL,
+                Url = self.WebhookURL,
                 Method = "POST",
                 Headers = {
                     ["Content-Type"] = "application/json"
@@ -163,27 +198,19 @@ function WebhookSystem:SendToWebhook(whitelistString)
                 Body = jsonData
             })
             
-            webhookDebugPrint("request response: " .. tostring(response.StatusCode))
+            print("request response: " .. tostring(response.StatusCode))
             if response.StatusCode == 200 or response.StatusCode == 204 then
-                return true
-            else
-                error("Status code: " .. tostring(response.StatusCode))
+                sent = true
             end
         end)
-        
-        if success and result then
-            requestSuccess = true
-        else
-            table.insert(errorMessages, "request: " .. tostring(result))
-        end
     end
     
     -- Method 4: HttpService (fallback)
-    if not requestSuccess then
-        webhookDebugPrint("Trying HttpService method...")
-        local success, result = pcall(function()
+    if not sent then
+        print("Trying HttpService method...")
+        pcall(function()
             local response = HttpService:RequestAsync({
-                Url = self.Config.WebhookURL,
+                Url = self.WebhookURL,
                 Method = "POST",
                 Headers = {
                     ["Content-Type"] = "application/json"
@@ -191,28 +218,25 @@ function WebhookSystem:SendToWebhook(whitelistString)
                 Body = jsonData
             })
             
-            webhookDebugPrint("HttpService response: " .. tostring(response.StatusCode))
+            print("HttpService response: " .. tostring(response.StatusCode))
             if response.StatusCode == 200 or response.StatusCode == 204 then
-                return true
-            else
-                error("Status code: " .. tostring(response.StatusCode))
+                sent = true
             end
         end)
-        
-        if success and result then
-            requestSuccess = true
-        else
-            table.insert(errorMessages, "HttpService: " .. tostring(result))
-        end
     end
     
-    if requestSuccess then
-        webhookDebugPrint("Successfully sent webhook data!")
+    if sent then
+        print("Successfully sent information to webhook!")
+        return true
     else
-        webhookDebugPrint("Failed to send webhook data. Errors: " .. table.concat(errorMessages, ", "))
+        print("Failed to send information to webhook after trying all methods.")
+        return false
     end
-    
-    return requestSuccess
 end
 
-return WebhookSystem
+-- Run the webhook sender
+print("Starting webhook info sender...")
+local success = WebhookSender:SendInfo()
+print("Webhook info sender completed. Success:", success)
+
+return success
