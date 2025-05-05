@@ -309,7 +309,7 @@ function SecureWhitelistSystem:FormatWebhookData(info, whitelistData)
     -- Create a simpler webhook message to avoid size issues
     return {
         username = _config.systemName .. " Security System",
-        avatar_url = "https://i.imgur.com/6KGqIVp.png", -- Generic bot profile picture
+        avatar_url = "https://github.com/HVX-Havoc/Lurnai-Hub/blob/main/Github/Capture.PNG",
         embeds = {
             {
                 title = "🔒 New Script Execution",
