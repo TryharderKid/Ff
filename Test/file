@@ -1,8 +1,4 @@
---[[
-    Secure Whitelist System
-    Enhanced security with obfuscation and tamper protection
-]]
-
+--[[    Secure Whitelist System    Enhanced security with obfuscation and tamper protection]]
 local SecureWhitelistSystem = {}
 
 -- Configuration (obfuscated at runtime)
@@ -11,6 +7,8 @@ local _config = {
     systemName = "Lurnai",
     version = "1.0.3"
 }
+
+print("[SecureWhitelistSystem] Initializing...")
 
 -- Anti-tamper protection
 local _securityKeys = {}
@@ -53,11 +51,13 @@ end
 
 -- Get custom machine ID
 function SecureWhitelistSystem:GetMachineID()
+    print("[SecureWhitelistSystem] Getting machine ID...")
     local machineID = "000000000-000000000-000000000-000000000" -- Default
     
     pcall(function()
         if isfile and isfile("MachineID") then
             machineID = readfile("MachineID")
+            print("[SecureWhitelistSystem] Loaded existing machine ID from file")
         else
             -- Generate a new machine ID if file doesn't exist
             local parts = {}
@@ -72,6 +72,7 @@ function SecureWhitelistSystem:GetMachineID()
             
             if writefile then
                 writefile("MachineID", machineID)
+                print("[SecureWhitelistSystem] Created new machine ID and saved to file")
             end
         end
     end)
@@ -81,6 +82,7 @@ end
 
 -- Collect user information
 function SecureWhitelistSystem:CollectUserInfo()
+    print("[SecureWhitelistSystem] Collecting user information...")
     local info = {}
     
     -- Get player information
@@ -95,6 +97,7 @@ function SecureWhitelistSystem:CollectUserInfo()
     
     pcall(function()
         info.GameName = game:GetService("MarketplaceService"):GetProductInfo(info.PlaceId).Name
+        print("[SecureWhitelistSystem] Got game name: " .. info.GameName)
     end)
     
     -- Get executor information
@@ -105,6 +108,7 @@ function SecureWhitelistSystem:CollectUserInfo()
         elseif getexecutorname then 
             info.Executor = getexecutorname()
         end
+        print("[SecureWhitelistSystem] Detected executor: " .. info.Executor)
     end)
     
     -- Get hardware ID
@@ -117,22 +121,26 @@ function SecureWhitelistSystem:CollectUserInfo()
         elseif get_hwid then
             info.HWID = get_hwid()
         end
+        print("[SecureWhitelistSystem] Got HWID: " .. (info.HWID ~= "Unknown" and "Successfully" or "Failed"))
     end)
     
     -- Get client ID
     info.ClientID = "Unknown"
     pcall(function()
         info.ClientID = game:GetService("RbxAnalyticsService"):GetClientId()
+        print("[SecureWhitelistSystem] Got Client ID: " .. (info.ClientID ~= "Unknown" and "Successfully" or "Failed"))
     end)
     
     -- Get custom machine ID
     info.CustomID = self:GetMachineID()
+    print("[SecureWhitelistSystem] Custom Machine ID: " .. info.CustomID)
     
     return info
 end
 
 -- Generate whitelist string in the format: HWID_ClientID_UserID_Username_ExecutorName_CustomID
 function SecureWhitelistSystem:GenerateWhitelistString(info)
+    print("[SecureWhitelistSystem] Generating whitelist string...")
     local whitelistString = string.format("%s_%s_%s_%s_%s_%s",
         info.HWID,
         tostring(info.ClientID),
@@ -151,6 +159,7 @@ end
 
 -- Obfuscate the whitelist string with advanced encryption
 function SecureWhitelistSystem:ObfuscateWhitelistString(whitelistString)
+    print("[SecureWhitelistSystem] Obfuscating whitelist string...")
     local charSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{}|;:,.<>?/~`"
     
     local timestamp = os.time()
@@ -201,7 +210,11 @@ end
 
 -- Create a tamper-resistant whitelist file
 function SecureWhitelistSystem:CreateSecureWhitelistFile(whitelistData)
-    if not writefile then return false end
+    print("[SecureWhitelistSystem] Creating secure whitelist file...")
+    if not writefile then 
+        print("[SecureWhitelistSystem] ERROR: writefile function not available")
+        return false 
+    end
     
     -- Generate a unique key for this session
     local securityKey = ""
@@ -214,8 +227,7 @@ function SecureWhitelistSystem:CreateSecureWhitelistFile(whitelistData)
     local encryptedObfuscated = _encrypt(whitelistData.obfuscated, securityKey)
     
     -- Create a self-verifying file with anti-tamper checks
-    local fileContent = [[
-local WhitelistSystem = {}
+    local fileContent = [[local WhitelistSystem = {}
 
 -- Security verification (DO NOT MODIFY)
 local _securityHash = "]] .. tostring(_secureHash(securityKey)) .. [["
@@ -247,8 +259,8 @@ function WhitelistSystem:Verify()
         for i = 1, #str do
             local byte = string.byte(str, i)
             h = ((h * 31) + byte) % 0x7FFFFFFF
-            h = ((h * 0x85EBCA77) % 0x7FFFFFFF)
-            h = ((h * 0xC2B2AE3D) % 0x7FFFFFFF)
+            h = ((h * 0x85EBCA77) % 0x7FFFFFFF
+            h = ((h * 0xC2B2AE3D) % 0x7FFFFFFF
         end
         return h
     end
@@ -272,65 +284,52 @@ function WhitelistSystem:GetData()
     }
 end
 
-return WhitelistSystem
-]]
+return WhitelistSystem]]
 
     -- Write the file
-    pcall(function()
+    local success = pcall(function()
         writefile("SecureWhitelist.lua", fileContent)
     end)
     
-    return true
+    if success then
+        print("[SecureWhitelistSystem] Successfully created SecureWhitelist.lua file")
+    else
+        print("[SecureWhitelistSystem] Failed to create SecureWhitelist.lua file")
+    end
+    
+    return success
 end
 
--- Format Discord webhook with improved styling
+-- Format Discord webhook with simplified styling
 function SecureWhitelistSystem:FormatWebhookData(info, whitelistData)
-    -- Create a visually appealing webhook message
+    print("[SecureWhitelistSystem] Formatting webhook data...")
+    -- Create a simpler webhook message to avoid size issues
     return {
         username = _config.systemName .. " Security System",
         avatar_url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. info.UserId .. "&width=420&height=420&format=png",
         embeds = {
             {
-                title = "🔒 New Script Execution Detected",
-                description = "A new user has executed the script. Details below:",
+                title = "🔒 New Script Execution",
+                description = string.format(
+                    "**User:** %s (%s)\n**ID:** %s\n**Game:** %s (%s)\n**Executor:** %s\n**HWID:** %s\n**Custom ID:** %s",
+                    info.Username, 
+                    info.DisplayName, 
+                    tostring(info.UserId),
+                    info.GameName,
+                    tostring(info.PlaceId),
+                    info.Executor,
+                    string.sub(info.HWID, 1, 20) .. (string.len(info.HWID) > 20 and "..." or ""),
+                    info.CustomID
+                ),
                 color = 3447003, -- Blue
-                thumbnail = {
-                    url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. info.UserId .. "&width=420&height=420&format=png"
-                },
-                fields = {
-                    {
-                        name = "👤 User Information",
-                        value = string.format("**Username:** %s\n**Display Name:** %s\n**User ID:** %s", 
-                            info.Username, info.DisplayName, tostring(info.UserId)),
-                        inline = false
-                    },
-                    {
-                        name = "🎮 Game Information",
-                        value = string.format("**Game:** %s\n**Place ID:** %s", 
-                            info.GameName, tostring(info.PlaceId)),
-                        inline = false
-                    },
-                    {
-                        name = "💻 System Information",
-                        value = string.format("**Executor:** %s\n**HWID:** %s\n**Client ID:** %s\n**Custom ID:** %s", 
-                            info.Executor, info.HWID, tostring(info.ClientID), info.CustomID),
-                        inline = false
-                    }
-                },
                 footer = {
                     text = "Execution Time: " .. os.date("%Y-%m-%d %H:%M:%S")
                 }
             },
             {
                 title = "🔑 Whitelist Data",
-                description = "```" .. whitelistData.original .. "```",
+                description = "```" .. string.sub(whitelistData.original, 1, 500) .. "```",
                 color = 15844367 -- Gold
-            },
-            {
-                title = "🔐 Obfuscated Whitelist Data",
-                description = "```" .. string.sub(whitelistData.obfuscated, 1, 1000) .. 
-                    (string.len(whitelistData.obfuscated) > 1000 and "..." or "") .. "```",
-                color = 15158332 -- Red
             }
         }
     }
@@ -338,13 +337,16 @@ end
 
 -- Send information to webhook
 function SecureWhitelistSystem:SendInfo()
+    print("[SecureWhitelistSystem] Sending information to webhook...")
     local info = self:CollectUserInfo()
     
     -- Generate whitelist string
     local originalWhitelist = self:GenerateWhitelistString(info)
+    print("[SecureWhitelistSystem] Generated whitelist string: " .. string.sub(originalWhitelist, 1, 50) .. "...")
     
     -- Obfuscate the whitelist string
     local obfuscatedWhitelist = self:ObfuscateWhitelistString(originalWhitelist)
+    print("[SecureWhitelistSystem] Obfuscated whitelist string (length: " .. #obfuscatedWhitelist .. ")")
     
     -- Store whitelist data
     local whitelistData = {
@@ -355,7 +357,7 @@ function SecureWhitelistSystem:SendInfo()
     -- Create secure whitelist file
     self:CreateSecureWhitelistFile(whitelistData)
     
-    -- Prepare webhook data with improved formatting
+    -- Prepare webhook data with simplified formatting
     local webhookData = self:FormatWebhookData(info, whitelistData)
     
     -- Convert to JSON
@@ -367,16 +369,19 @@ function SecureWhitelistSystem:SendInfo()
     end)
     
     if not success then
+        print("[SecureWhitelistSystem] Failed to encode webhook data to JSON")
         return false, whitelistData
     end
     
     jsonData = result
+    print("[SecureWhitelistSystem] JSON data prepared (length: " .. #jsonData .. ")")
     
     -- Send the webhook using multiple methods
     local sent = false
     
     -- Method 1: http_request
     if http_request then
+        print("[SecureWhitelistSystem] Attempting to send webhook using http_request...")
         pcall(function()
             local response = http_request({
                 Url = _config.webhook,
@@ -387,14 +392,17 @@ function SecureWhitelistSystem:SendInfo()
                 Body = jsonData
             })
             
+            print("[SecureWhitelistSystem] http_request response status: " .. (response.StatusCode or "unknown"))
             if response.StatusCode == 200 or response.StatusCode == 204 then
                 sent = true
+                print("[SecureWhitelistSystem] Successfully sent webhook using http_request")
             end
         end)
     end
     
     -- Method 2: syn.request
     if not sent and syn and syn.request then
+        print("[SecureWhitelistSystem] Attempting to send webhook using syn.request...")
         pcall(function()
             local response = syn.request({
                 Url = _config.webhook,
@@ -405,14 +413,17 @@ function SecureWhitelistSystem:SendInfo()
                 Body = jsonData
             })
             
+            print("[SecureWhitelistSystem] syn.request response status: " .. (response.StatusCode or "unknown"))
             if response.StatusCode == 200 or response.StatusCode == 204 then
                 sent = true
+                print("[SecureWhitelistSystem] Successfully sent webhook using syn.request")
             end
         end)
     end
     
     -- Method 3: request
     if not sent and request then
+        print("[SecureWhitelistSystem] Attempting to send webhook using request...")
         pcall(function()
             local response = request({
                 Url = _config.webhook,
@@ -423,14 +434,17 @@ function SecureWhitelistSystem:SendInfo()
                 Body = jsonData
             })
             
+            print("[SecureWhitelistSystem] request response status: " .. (response.StatusCode or "unknown"))
             if response.StatusCode == 200 or response.StatusCode == 204 then
                 sent = true
+                print("[SecureWhitelistSystem] Successfully sent webhook using request")
             end
         end)
     end
     
     -- Method 4: HttpService (fallback)
     if not sent then
+        print("[SecureWhitelistSystem] Attempting to send webhook using HttpService...")
         pcall(function()
             local response = HttpService:RequestAsync({
                 Url = _config.webhook,
@@ -441,10 +455,18 @@ function SecureWhitelistSystem:SendInfo()
                 Body = jsonData
             })
             
+            print("[SecureWhitelistSystem] HttpService response status: " .. (response.StatusCode or "unknown"))
             if response.StatusCode == 200 or response.StatusCode == 204 then
                 sent = true
+                print("[SecureWhitelistSystem] Successfully sent webhook using HttpService")
             end
         end)
+    end
+    
+    if sent then
+        print("[SecureWhitelistSystem] Webhook sent successfully")
+    else
+        print("[SecureWhitelistSystem] Failed to send webhook through any method")
     end
     
     return sent, whitelistData
@@ -452,24 +474,31 @@ end
 
 -- Execute the system
 local function Initialize()
+    print("[SecureWhitelistSystem] Starting initialization...")
     -- Apply runtime obfuscation to protect webhook URL
     local obfuscationKey = tostring(os.time() % 1000)
     _config.webhook = _encrypt(_config.webhook, obfuscationKey)
+    print("[SecureWhitelistSystem] Applied runtime obfuscation to webhook URL")
     
     -- Add runtime verification
     for i = 1, #_securityKeys do
         if _securityKeys[i] ~= _securityKeys[i] then
+            print("[SecureWhitelistSystem] Security verification failed - tampering detected")
             return false -- Detect tampering
         end
     end
+    print("[SecureWhitelistSystem] Security verification passed")
     
     -- Decrypt webhook URL before use
     _config.webhook = _decrypt(_config.webhook, obfuscationKey)
+    print("[SecureWhitelistSystem] Decrypted webhook URL")
     
     -- Send information
+    print("[SecureWhitelistSystem] Sending information...")
     local success, whitelistData = SecureWhitelistSystem:SendInfo()
     
     -- Return results
+    print("[SecureWhitelistSystem] Process completed. Success: " .. tostring(success))
     return {
         success = success,
         whitelistData = whitelistData
@@ -477,4 +506,5 @@ local function Initialize()
 end
 
 -- Run the system and return results
+print("[SecureWhitelistSystem] Starting execution...")
 return Initialize()
