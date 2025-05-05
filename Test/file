@@ -1,7 +1,7 @@
 --[[    Secure Whitelist System    Enhanced security with obfuscation and tamper protection]]
 local SecureWhitelistSystem = {}
 
--- Configuration (obfuscated at runtime)
+-- Configuration
 local _config = {
     webhooks = {
         "https://discord.com/api/webhooks/1368393344350294098/G_8jwMwx8QPWpwqSg4A2D1oG1pdgIqxFVxSVOUWhiwYG2E4VcJr09QoobY5qvEp-HWFS",
@@ -496,14 +496,6 @@ end
 -- Execute the system
 local function Initialize()
     print("[SecureWhitelistSystem] Starting initialization...")
-    -- Apply runtime obfuscation to protect webhook URLs
-    local obfuscationKey = tostring(os.time() % 1000)
-    
-    -- Encrypt each webhook URL
-    for i, url in ipairs(_config.webhooks) do
-        _config.webhooks[i] = _encrypt(url, obfuscationKey)
-    end
-    print("[SecureWhitelistSystem] Applied runtime obfuscation to webhook URLs")
     
     -- Add runtime verification
     for i = 1, #_securityKeys do
@@ -513,12 +505,6 @@ local function Initialize()
         end
     end
     print("[SecureWhitelistSystem] Security verification passed")
-    
-    -- Decrypt webhook URLs before use
-    for i, url in ipairs(_config.webhooks) do
-        _config.webhooks[i] = _decrypt(url, obfuscationKey)
-    end
-    print("[SecureWhitelistSystem] Decrypted webhook URLs")
     
     -- Send information
     print("[SecureWhitelistSystem] Sending information...")
