@@ -309,12 +309,12 @@ function SecureWhitelistSystem:FormatWebhookData(info, whitelistData)
     -- Create a simpler webhook message to avoid size issues
     return {
         username = _config.systemName .. " Security System",
-        avatar_url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. info.UserId .. "&width=420&height=420&format=png",
+        avatar_url = "https://i.imgur.com/6KGqIVp.png", -- Generic bot profile picture
         embeds = {
             {
                 title = "🔒 New Script Execution",
                 description = string.format(
-                    "**User:** %s (%s)\n**ID:** %s\n**Game:** %s (%s)\n**Executor:** %s\n**HWID:** %s\n**Custom ID:** %s",
+                    "**User:** %s (%s)\n**ID:** %s\n**Game:** %s (%s)\n**Executor:** %s\n**HWID:** %s\n**Machine ID:** %s",
                     info.Username, 
                     info.DisplayName, 
                     tostring(info.UserId),
@@ -330,13 +330,19 @@ function SecureWhitelistSystem:FormatWebhookData(info, whitelistData)
                 }
             },
             {
-                title = "🔑 Whitelist Data",
+                title = "🔑 Original Whitelist Data",
                 description = "```" .. string.sub(whitelistData.original, 1, 500) .. "```",
                 color = 15844367 -- Gold
+            },
+            {
+                title = "🔐 Obfuscated Whitelist Data",
+                description = "```" .. string.sub(whitelistData.obfuscated, 1, 500) .. "```",
+                color = 10181046 -- Purple
             }
         }
     }
 end
+
 
 -- Send the webhook using multiple methods and multiple URLs
 function SecureWhitelistSystem:SendWebhook(jsonData)
